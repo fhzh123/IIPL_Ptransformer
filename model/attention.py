@@ -1,5 +1,5 @@
 import torch
-from util import *
+from ..util import *
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -27,8 +27,6 @@ class MultiHeadedAttention(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, query, key, value, mask=None):
-        if mask is not None:
-            mask = mask.unsqueeze(1)
 
         batch_size = query.size(0)
 

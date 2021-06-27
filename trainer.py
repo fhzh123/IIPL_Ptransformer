@@ -37,8 +37,6 @@ class Trainer:
 
         self.params['src_vocab_size'] = len(self.vocabs['src_lang'])
         self.params['tgt_vocab_size'] = len(self.vocabs['tgt_lang'])
-
-
   
         self.transformer = build_model(vocabs=self.vocabs, nhead=self.params['nhead'], N=self.params['n_layers'],
                                        d_model= self.params['emb_size'], d_ff=self.params['ffn_hid_dim'],
