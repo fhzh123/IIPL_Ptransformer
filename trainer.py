@@ -50,31 +50,31 @@ class Trainer:
 
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 
-def train(self):
-    print("\nbegin training...")
+    def train(self):
+        print("\nbegin training...")
 
-    for epoch in range(self.params['num_epoch']):
-        start_time = time.time()
+        for epoch in range(self.params['num_epoch']):
+            start_time = time.time()
 
-        epoch_loss = train_loop(self.train_iter, self.transformer, self.optimizer, self.criterion, self.device)
-        val_loss = val_loop(self.val_iter, self.transformer, self.criterion, self.device)
+            epoch_loss = train_loop(self.train_iter, self.transformer, self.optimizer, self.criterion, self.device)
+            val_loss = val_loop(self.val_iter, self.transformer, self.criterion, self.device)
 
-        end_time = time.time()
+            end_time = time.time()
 
-        if (epoch + 1) % 5 == 0:
-            test(self.test_iter, self.transformer, self.criterion, self.device)
+            if (epoch + 1) % 5 == 0:
+                test(self.test_iter, self.transformer, self.criterion, self.device)
 
-        if (epoch + 1) % 10 == 0:
-            get_bleu(self.test_sentences, self.transformer, self.vocabs, self.text_transform, self.device)
+            if (epoch + 1) % 10 == 0:
+                get_bleu(self.test_sentences, self.transformer, self.vocabs, self.text_transform, self.device)
 
-        minutes, seconds, time_left_min, time_left_sec = epoch_time(end_time-start_time, epoch, self.params['num_epoch'])
-        
-        print("Epoch: {} out of {}".format(epoch+1, self.params['num_epoch']))
-        print("Train_loss: {} - Val_loss: {} - Epoch time: {}m {}s - Time left for training: {}m {}s"\
-        .format(round(epoch_loss, 3), round(val_loss, 3), minutes, seconds, time_left_min, time_left_sec))
+            minutes, seconds, time_left_min, time_left_sec = epoch_time(end_time-start_time, epoch, self.params['num_epoch'])
+            
+            print("Epoch: {} out of {}".format(epoch+1, self.params['num_epoch']))
+            print("Train_loss: {} - Val_loss: {} - Epoch time: {}m {}s - Time left for training: {}m {}s"\
+            .format(round(epoch_loss, 3), round(val_loss, 3), minutes, seconds, time_left_min, time_left_sec))
 
-    torch.save(self.transformer.state_dict(), 'checkpoints/new_script_checkpoint_inf2.pth')
-    torch.save(self.transformer, 'checkpoints/new_script_checkpoint_mod2.pt')
+        torch.save(self.transformer.state_dict(), 'checkpoints/new_script_checkpoint_inf2.pth')
+        torch.save(self.transformer, 'checkpoints/new_script_checkpoint_mod2.pt')
 
 def train_loop(train_iter, model, optimizer, criterion, device):
     epoch_loss = 0
@@ -88,7 +88,7 @@ def train_loop(train_iter, model, optimizer, criterion, device):
         optimizer.zero_grad()
     
         src_mask = make_src_mask(src)
-        tgt_mask = make_trg_mask(src)
+        tgt_mask = make_trg_mask(tgt_input, device)
         logits = model(src, tgt_input, src_mask, tgt_mask)
         
         tgt_out = tgt[1:, :]
@@ -111,9 +111,9 @@ def val_loop(val_iter, model, criterion, device):
         tgt = tgt.to(device)
 
         tgt_input = tgt[:-1, :]
-        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input, device)
-
-        logits = model(src, tgt_input, src_mask, tgt_mask,src_padding_mask, tgt_padding_mask, src_padding_mask)
+        src_mask = make_src_mask(src)
+        tgt_mask = make_trg_mask(tgt_input, device)
+        logits = model(src, tgt_input, src_mask, tgt_mask)
 
         tgt_out = tgt[1:, :]
         loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
@@ -130,16 +130,16 @@ def test(test_iter, model, criterion, device):
         tgt = tgt.to(device)
 
         tgt_input = tgt[:-1, :]
-        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input, device)
-
-        logits = model(src, tgt_input, src_mask, tgt_mask,src_padding_mask, tgt_padding_mask, src_padding_mask)
+        src_mask = make_src_mask(src, device)
+        tgt_mask = make_trg_mask(src, device)
+        logits = model(src, tgt_input, src_mask, tgt_mask)
 
         tgt_out = tgt[1:, :]
         loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
         test_loss += loss.item()
     test_loss /= len(test_iter)
 
-    print("Test Loss: {}".format(test_loss, 3))
+    print("Test Loss: {}".format(round(test_loss, 3)))
 
 def get_bleu(sentences, model, vocabs, text_transform, device):
     bleu_scores = 0

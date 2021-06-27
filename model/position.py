@@ -1,3 +1,4 @@
+from fetch_tokenizers import PAD_IDX
 import math
 import torch
 import torch.nn as nn
@@ -16,7 +17,7 @@ class PositionWiseFeedForward(nn.Module):
 class Embeddings(nn.Module):
     def __init__(self, d_model, vocab):
         super(Embeddings, self).__init__()
-        self.emb = nn.Embedding(vocab, d_model)
+        self.emb = nn.Embedding(vocab, d_model, padding_idx=PAD_IDX)
         self.d_model = d_model
 
     def forward(self, x):

@@ -1,14 +1,14 @@
 import torch
-from ..util import *
+from util import *
 import torch.nn as nn
 import torch.nn.functional as F
 
 def attention(query, key, value, mask=None, dropout=None):
-    q_k = torch.matmul(query, key.transpose(-2, -1))
+    q_k = torch.matmul(query, key.transpose(-1, -2))
     scores = q_k / math.sqrt(query.size(-1))
-    if mask is not None:
-        mask = mask.unsqueeze(1)
-        scores = scores.masked_fill(mask == 0, -1e9)
+    # if mask is not None:
+    #     mask = mask.unsqueeze(1)
+    #     scores = scores.masked_fill(mask == 0, -1e9)
 
     output = F.softmax(scores, dim=-1)
     if dropout is not None:
@@ -16,9 +16,9 @@ def attention(query, key, value, mask=None, dropout=None):
     
     return torch.matmul(output, value), output
 
-class MultiHeadedAttention(nn.Module):
+class MultiHeadAttention(nn.Module):
     def __init__(self, nhead, d_model, dropout=0.1):
-        super(MultiHeadedAttention, self).__init__()
+        super(MultiHeadAttention, self).__init__()
         assert d_model % nhead == 0
         # since d_k = d_v = d_model / nhead
         self.d_k = d_model // nhead
@@ -27,12 +27,14 @@ class MultiHeadedAttention(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, query, key, value, mask=None):
-
         batch_size = query.size(0)
 
-        # Linear through of all query, key, and value layers.
-        query, key, value = [ linear(x).view(batch_size, -1, self.nhead, self.d_k).transpose(1,2)
-                             for linear, x in zip(self.linears, (query, key, value)) ]
+        if mask is not None:
+            mask = mask.unsqueeze(1)
+
+        query, key, value = \
+            [l(x).view(batch_size, -1, self.nhead, self.d_k).transpose(1, 2)
+             for l, x in zip(self.linears, (query, key, value))]
 
         # Scaled Dot-Product Attention layer
         x, attn = attention(query, key, value, mask, self.dropout)

@@ -36,7 +36,9 @@ class p_transformer(nn.Module):
         return self.encode_decode(src, tgt, src_mask, tgt_mask)
 
     def encode_decode(self, src, tgt, src_mask, tgt_mask):
-        return self.encoder_decoder(src, tgt, src_mask, tgt_mask)
+        src = src.transpose(0,1)
+        tgt = tgt.transpose(0,1)
+        return self.encoder_decoder(self.src_embed(src), src_mask, self.tgt_embed(tgt), tgt_mask)
 
 def make_src_mask(src):
     
@@ -69,7 +71,7 @@ def make_trg_mask(trg, device):
     return trg_mask
 
 def build_model(vocabs, nhead, d_model, d_ff, N, device, dropout=0.1, variation=False, load=False):
-    attn = nn.MultiheadAttention(d_model, nhead,dropout)
+    attn = MultiHeadAttention(nhead, d_model, dropout)
     feedforward = PositionWiseFeedForward(d_model, d_ff)
     position = PositionalEncoding(d_model, dropout)
     if not variation:
@@ -80,7 +82,7 @@ def build_model(vocabs, nhead, d_model, d_ff, N, device, dropout=0.1, variation=
                               Generator(d_model, len(vocabs['tgt_lang']))
                               )
     else:
-        model = p_transformer(Encoder_Decoder(EnocderLayer(N, dc(attn), dc(feedforward), dropout), DecoderLayer(N, dc(attn), dc(attn), dc(feedforward), dropout)),
+        model = p_transformer(Encoder_Decoder(EnocderLayer(d_model, dc(attn), dc(feedforward), dropout), DecoderLayer(d_model, dc(attn), dc(attn), dc(feedforward), dropout), N),
                               nn.Sequential(Embeddings(d_model, len(vocabs['src_lang'])), dc(position)),
                               nn.Sequential(Embeddings(d_model, len(vocabs['tgt_lang'])), dc(position)),
                               Generator(d_model, len(vocabs['tgt_lang']))
