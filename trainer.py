@@ -32,7 +32,10 @@ class Trainer:
         self.sentences = {'src_lang': kor, 'tgt_lang': eng}
         self.tokens = get_tokens(self.sentences, token_type)
         self.vocabs = build_vocabs(self.sentences, self.tokens)
-        self.train_iter = get_train_iter(self.sentences, self.tokens, self.vocabs, self.params['batch_size'])
+        train_sentences, val_sentences, self.test_sentences = divide_sentences(self.sentences)
+        self.train_iter = get_train_iter(train_sentences, self.tokens, self.vocabs, self.params['batch_size'])
+        self.val_iter = get_test_iter(val_sentences, self.tokens, self.vocabs, self.params['batch_size'])
+        self.test_iter = get_test_iter(self.test_sentences, self.tokens, self.vocabs, self.params['batch_size'])
 
 
         self.params['src_vocab_size'] = len(self.vocabs['src_lang'])
@@ -114,10 +117,12 @@ def val_loop(val_iter, model, criterion, device):
         tgt_input = tgt[:-1, :]
         src_mask = make_src_mask(src)
         tgt_mask = make_trg_mask(tgt_input, device)
-        logits = model(src=src, src_mask=src_mask, tgt=tgt, tgt_mask=tgt_mask)
+        logits = model(src=src, src_mask=src_mask, tgt=tgt_input, tgt_mask=tgt_mask)
 
-        tgt_out = tgt[1:, :]
-        loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
+        output = logits.contiguous().reshape(-1, logits.shape[-1])
+        target = tgt[1:,:].contiguous().reshape(-1)
+        
+        loss = criterion(output, target)   
         val_loss += loss.item()
 
     return val_loss / len(val_iter)
@@ -133,10 +138,12 @@ def test(test_iter, model, criterion, device):
         tgt_input = tgt[:-1, :]
         src_mask = make_src_mask(src, device)
         tgt_mask = make_trg_mask(src, device)
-        logits = model(src=src, src_mask=src_mask, tgt=tgt, tgt_mask=tgt_mask)
+        logits = model(src=src, src_mask=src_mask, tgt=tgt_input, tgt_mask=tgt_mask)
 
-        tgt_out = tgt[1:, :]
-        loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
+        output = logits.contiguous().reshape(-1, logits.shape[-1])
+        target = tgt[1:,:].contiguous().reshape(-1)
+        
+        loss = criterion(output, target)   
         test_loss += loss.item()
     test_loss /= len(test_iter)
 
@@ -146,12 +153,15 @@ def get_bleu(sentences, model, vocabs, text_transform, device):
     bleu_scores = 0
     chencherry = bs.SmoothingFunction()
 
-
+    count = 0
     for ko, eng in zip(sentences['src_lang'], sentences['tgt_lang']):
         candidate = translate(model, ko, vocabs, text_transform, device).split()
         ref = eng.split()
 
+        count += 1
         bleu_scores += bs.sentence_bleu([ref], candidate, smoothing_function=chencherry.method2) 
+        print(bleu_scores)
+        print(count)
 
     print('BLEU score -> {}'.format(bleu_scores/len(sentences['src_lang'])))
 
