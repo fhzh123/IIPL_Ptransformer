@@ -113,12 +113,14 @@ def val_loop(val_iter, model, criterion, device):
         tgt = tgt.to(device)
 
         tgt_input = tgt[:-1, :]
-        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input, device)
+        src_mask = make_src_mask(src)
+        tgt_mask = make_trg_mask(tgt_input, device)
+        logits = model(src=src, src_mask=src_mask, tgt=tgt_input, tgt_mask=tgt_mask)
 
-        logits = model(src, tgt_input, src_mask, tgt_mask,src_padding_mask, tgt_padding_mask, src_padding_mask)
-
-        tgt_out = tgt[1:, :]
-        loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
+        output = logits.contiguous().reshape(-1, logits.shape[-1])
+        target = tgt[1:,:].contiguous().reshape(-1)
+        
+        loss = criterion(output, target)   
         val_loss += loss.item()
 
     return val_loss / len(val_iter)
@@ -132,12 +134,14 @@ def test(test_iter, model, criterion, device):
         tgt = tgt.to(device)
 
         tgt_input = tgt[:-1, :]
-        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input, device)
+        src_mask = make_src_mask(src, device)
+        tgt_mask = make_trg_mask(src, device)
+        logits = model(src=src, src_mask=src_mask, tgt=tgt_input, tgt_mask=tgt_mask)
 
-        logits = model(src, tgt_input, src_mask, tgt_mask,src_padding_mask, tgt_padding_mask, src_padding_mask)
-
-        tgt_out = tgt[1:, :]
-        loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
+        output = logits.contiguous().reshape(-1, logits.shape[-1])
+        target = tgt[1:,:].contiguous().reshape(-1)
+        
+        loss = criterion(output, target)   
         test_loss += loss.item()
     test_loss /= len(test_iter)
 
@@ -147,13 +151,15 @@ def get_bleu(sentences, model, vocabs, text_transform, device):
     bleu_scores = 0
     chencherry = bs.SmoothingFunction()
 
-
+    count = 0
     for ko, eng in zip(sentences['src_lang'], sentences['tgt_lang']):
         candidate = translate(model, ko, vocabs, text_transform, device).split()
         ref = eng.split()
 
-        print(bs.sentence_bleu([ref], candidate, smoothing_function=chencherry.method2))
+        count += 1
         bleu_scores += bs.sentence_bleu([ref], candidate, smoothing_function=chencherry.method2) 
+        print(bleu_scores)
+        print(count)
 
     print('BLEU score -> {}'.format(bleu_scores/len(sentences['src_lang'])))
 
