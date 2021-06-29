@@ -3,8 +3,9 @@ from util import *
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 def attention(query, key, value, mask=None, dropout=None):
-    q_k = torch.matmul(query, key.transpose(-1, -2))
+    q_k = torch.matmul(query, key.transpose(-2, -1))
     scores = q_k / math.sqrt(query.size(-1))
     # if mask is not None:
     #     mask = mask.unsqueeze(1)

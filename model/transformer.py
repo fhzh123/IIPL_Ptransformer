@@ -32,13 +32,13 @@ class p_transformer(nn.Module):
         self.tgt_embed = tgt_embed
         self.generator = generator
 
-    def forward(self, src, tgt, src_mask, tgt_mask):
-        return self.encode_decode(src, tgt, src_mask, tgt_mask)
+    def forward(self, src, src_mask, tgt, tgt_mask):
+        return self.generator(self.encode_decode(src=src, src_mask=src_mask, tgt=tgt, tgt_mask=tgt_mask))
 
-    def encode_decode(self, src, tgt, src_mask, tgt_mask):
+    def encode_decode(self, src, src_mask, tgt, tgt_mask):
         src = src.transpose(0,1)
         tgt = tgt.transpose(0,1)
-        return self.encoder_decoder(self.src_embed(src), src_mask, self.tgt_embed(tgt), tgt_mask)
+        return self.encoder_decoder(src=self.src_embed(src), src_mask=src_mask, tgt=self.tgt_embed(tgt), tgt_mask=tgt_mask)
 
 def make_src_mask(src):
     

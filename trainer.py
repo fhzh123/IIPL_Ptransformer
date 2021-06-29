@@ -83,17 +83,18 @@ def train_loop(train_iter, model, optimizer, criterion, device):
         src = src.to(device)
         tgt = tgt.to(device)
 
-        tgt_input = tgt[:-1, :]
+        tgt_input = tgt[:-1,:]
 
         optimizer.zero_grad()
     
         src_mask = make_src_mask(src)
         tgt_mask = make_trg_mask(tgt_input, device)
-        logits = model(src, tgt_input, src_mask, tgt_mask)
-        
-        tgt_out = tgt[1:, :]
+        logits = model(src=src, src_mask=src_mask, tgt=tgt_input, tgt_mask=tgt_mask)
 
-        loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))                    
+        output = logits.contiguous().reshape(-1, logits.shape[-1])
+        target = tgt[1:,:].contiguous().reshape(-1)
+        
+        loss = criterion(output, target)                    
         loss.backward()
         
         optimizer.step()
@@ -113,7 +114,7 @@ def val_loop(val_iter, model, criterion, device):
         tgt_input = tgt[:-1, :]
         src_mask = make_src_mask(src)
         tgt_mask = make_trg_mask(tgt_input, device)
-        logits = model(src, tgt_input, src_mask, tgt_mask)
+        logits = model(src=src, src_mask=src_mask, tgt=tgt, tgt_mask=tgt_mask)
 
         tgt_out = tgt[1:, :]
         loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
@@ -132,7 +133,7 @@ def test(test_iter, model, criterion, device):
         tgt_input = tgt[:-1, :]
         src_mask = make_src_mask(src, device)
         tgt_mask = make_trg_mask(src, device)
-        logits = model(src, tgt_input, src_mask, tgt_mask)
+        logits = model(src=src, src_mask=src_mask, tgt=tgt, tgt_mask=tgt_mask)
 
         tgt_out = tgt[1:, :]
         loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))

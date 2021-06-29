@@ -37,5 +37,5 @@ class Encoder_Decoder(nn.Module):
     def forward(self, src, src_mask, tgt, tgt_mask):
         for n in range(self.N):
             encoder_output = self.encoder_norm(self.encoder_layers[n](src, src_mask))
-            decoder_output = self.decoder_norm(self.decoder_layers[n](encoder_output, src_mask, tgt, tgt_mask))
+            decoder_output = self.decoder_norm(self.decoder_layers[n](tgt, encoder_output, src_mask, tgt_mask))
         return decoder_output
