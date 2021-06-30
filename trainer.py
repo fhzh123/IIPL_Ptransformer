@@ -67,8 +67,8 @@ class Trainer:
             if (epoch + 1) % 5 == 0:
                 test(self.test_iter, self.transformer, self.criterion, self.device)
 
-            if (epoch + 1) % 10 == 0:
-                get_bleu(self.test_sentences, self.transformer, self.vocabs, self.text_transform, self.device)
+            # if (epoch + 1) % 10 == 0:
+            #     get_bleu(self.test_sentences, self.transformer, self.vocabs, self.text_transform, self.device)
 
             minutes, seconds, time_left_min, time_left_sec = epoch_time(end_time-start_time, epoch, self.params['num_epoch'])
             
@@ -136,8 +136,8 @@ def test(test_iter, model, criterion, device):
         tgt = tgt.to(device)
 
         tgt_input = tgt[:-1, :]
-        src_mask = make_src_mask(src, device)
-        tgt_mask = make_trg_mask(src, device)
+        src_mask = make_src_mask(src)
+        tgt_mask = make_trg_mask(tgt_input, device)
         logits = model(src=src, src_mask=src_mask, tgt=tgt_input, tgt_mask=tgt_mask)
 
         output = logits.contiguous().reshape(-1, logits.shape[-1])
