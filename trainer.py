@@ -52,7 +52,7 @@ class Trainer:
         )
 
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
-        
+
     def train(self):
         print("\nbegin training...")
 
@@ -86,16 +86,18 @@ def train_loop(train_iter, model, optimizer, criterion, device):
         src = src.to(device)
         tgt = tgt.to(device)
 
-        tgt_input = tgt[:-1, :]
+        tgt_input = tgt[:-1,:]
 
         optimizer.zero_grad()
-        
-        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input, device)
-        logits = model(src, tgt_input, src_mask, tgt_mask, src_padding_mask, tgt_padding_mask, src_padding_mask)
-        
-        tgt_out = tgt[1:, :]
+    
+        src_mask = make_src_mask(src)
+        tgt_mask = make_trg_mask(tgt_input, device)
+        logits = model(src=src, src_mask=src_mask, tgt=tgt_input, tgt_mask=tgt_mask)
 
-        loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))                    
+        output = logits.contiguous().reshape(-1, logits.shape[-1])
+        target = tgt[1:,:].contiguous().reshape(-1)
+        
+        loss = criterion(output, target)                    
         loss.backward()
         
         optimizer.step()
@@ -145,7 +147,7 @@ def test(test_iter, model, criterion, device):
         test_loss += loss.item()
     test_loss /= len(test_iter)
 
-    print("Test Loss: {}".format(test_loss, 3))
+    print("Test Loss: {}".format(round(test_loss, 3)))
 
 def get_bleu(sentences, model, vocabs, text_transform, device):
     bleu_scores = 0
