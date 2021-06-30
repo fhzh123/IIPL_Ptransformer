@@ -30,12 +30,11 @@ class Encoder_Decoder(nn.Module):
         super(Encoder_Decoder, self).__init__()
         self.encoder_layers = clones(encoder_layer, N)
         self.decoder_layers = clones(decoder_layer, N)
-        self.encoder_norm = nn.LayerNorm(encoder_layer.size, eps=1e-6)
-        self.decoder_norm = nn.LayerNorm(decoder_layer.size, eps=1e-6)
+        self.norm = nn.LayerNorm(encoder_layer.size, eps=1e-6)
         self.N = N
 
     def forward(self, src, src_mask, tgt, tgt_mask):
         for n in range(self.N):
             src = self.encoder_layers[n](src, src_mask)
             tgt = self.decoder_layers[n](tgt, src, src_mask, tgt_mask)
-        return tgt
+        return self.norm(tgt)
