@@ -6,7 +6,6 @@ from tokenizers.pre_tokenizers import Whitespace
 from torchtext.vocab import Vocab, build_vocab_from_iterator
 
 PAD_IDX, SOS_IDX, EOS_IDX, UNK_IDX = 0, 1, 2, 3
-!@#$
 
 def get_ko_words(sentences):
   word_extractor = WordExtractor(min_frequency=100,
