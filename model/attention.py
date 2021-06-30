@@ -21,7 +21,6 @@ class MultiHeadAttention(nn.Module):
     def __init__(self, nhead, d_model, dropout=0.1):
         super(MultiHeadAttention, self).__init__()
         assert d_model % nhead == 0
-        # since d_k = d_v = d_model / nhead
         self.d_k = d_model // nhead
         self.nhead = nhead
         self.linears = clones(nn.Linear(d_model, d_model), 4)
