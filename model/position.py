@@ -32,7 +32,7 @@ class Embeddings(nn.Module):
         self.d_model = d_model
 
     def forward(self, x):
-        return self.emb(x) * math.sqrt(self.d_model)
+        return self.emb(x.long()) * math.sqrt(self.d_model)
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, dropout, max_len=5000):
@@ -50,5 +50,5 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('positional_embedding', positional_embedding)
 
     def forward(self, x):
-        x = x + self.positional_embedding[:x.size(0),:].requires_grad_(False)
+        x = x + self.positional_embedding[:x.size(0),:]
         return self.dropout(x)
