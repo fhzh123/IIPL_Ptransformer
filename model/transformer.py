@@ -7,20 +7,36 @@ from model.position import *
 from util import *
 
 class o_transformer(nn.Module):
-    def __init__(self, encoder, decoder, src_embed, tgt_embed, generator):
+    def __init__(self, encoder, decoder, src_embed, tgt_embed, generator, device):
         super(o_transformer, self).__init__()
         self.encoder = encoder
         self.decoder = decoder
         self.src_embed = src_embed
         self.tgt_embed = tgt_embed
         self.generator = generator
+        self.device = device
 
-    def forward(self, src, tgt, src_mask, tgt_mask):
+    def forward(self, src, tgt):
+        src = src.transpose(0,1)
+
+        # src = [batch size, src len]
+
+        src_mask = make_src_mask(src)
+
+        # src_mask = [batch_size, 1, 1, src len]
+
+        tgt = tgt.transpose(0,1)
+
+        # tgt = [batch size, trg len]
+
+        tgt_mask = make_trg_mask(tgt, self.device)
+
+        # tgt_mask = [batch_size, 1, trg len, trg len]
+
         return self.decode(self.encode(src, src_mask), tgt, src_mask, tgt_mask)
 
     def encode(self, src, src_mask):
         return self.encoder(self.src_embed(src), src_mask)
-
     def decode(self, memory, src_mask, tgt, tgt_mask):
         return self.decoder(self.tgt_embed(tgt), memory, src_mask, tgt_mask)
 
@@ -95,7 +111,7 @@ def build_model(vocabs, nhead, d_model, d_ff, N, device, dropout=0.1, variation=
                               Decoder(DecoderLayer(d_model, dc(attn), dc(attn), dc(feedforward), dropout), N),
                               nn.Sequential(Embeddings(d_model, len(vocabs['src_lang'])), dc(position)),
                               nn.Sequential(Embeddings(d_model, len(vocabs['tgt_lang'])), dc(position)),
-                              Generator(d_model, len(vocabs['tgt_lang']))
+                              Generator(d_model, len(vocabs['tgt_lang'])), device=device
                               )
     else:
         model = p_transformer(Encoder_Decoder(EnocderLayer(d_model, dc(attn), dc(feedforward), dropout), DecoderLayer(d_model, dc(attn), dc(attn), dc(feedforward), dropout), N),
