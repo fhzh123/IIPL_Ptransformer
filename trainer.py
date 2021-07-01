@@ -16,7 +16,7 @@ torch.backends.cudnn.deterministic = True
 
 
 class Trainer:
-    def __init__(self, file_path, num_epoch,
+    def __init__(self, file_path, num_epoch, lr,
                  emb_size, nhead, ffn_hid_dim, batch_size, 
                  n_layers, dropout, token_type, load, variation):
         self.params = {'num_epoch': num_epoch,
@@ -25,7 +25,9 @@ class Trainer:
                        'ffn_hid_dim': ffn_hid_dim,
                        'batch_size': batch_size,
                        'n_layers': n_layers,
-                       'dropout': dropout}
+                       'dropout': dropout,
+                       'lr': lr,
+                       }
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         kor, eng = get_kor_eng_sentences(file_path)
@@ -45,11 +47,12 @@ class Trainer:
                                        d_model= self.params['emb_size'], d_ff=self.params['ffn_hid_dim'],
                                        device=self.device, dropout=self.params['dropout'], load=load, variation=variation)
         
-        self.optimizer = ScheduledOptim(
-            optim.Adam(self.transformer.parameters(), betas=(0.9, 0.98), eps=1e-9),
-            warmup_steps=4000,
-            hidden_dim=self.params['ffn_hid_dim']
-        )
+        # self.optimizer = ScheduledOptim(
+        #     optim.Adam(self.transformer.parameters(), betas=(0.9, 0.98), eps=self.params['lr']),
+        #     warmup_steps=4000,
+        #     hidden_dim=self.params['ffn_hid_dim']
+        # )
+        self.optimizer = optim.Adam(self.transformer.parameters(), betas=(0.9, 0.98), eps=self.params['lr'])
 
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 
@@ -89,10 +92,8 @@ def train_loop(train_iter, model, optimizer, criterion, device):
         tgt_input = tgt[:-1,:]
 
         optimizer.zero_grad()
-    
-        src_mask = make_src_mask(src)
-        tgt_mask = make_trg_mask(tgt_input, device)
-        logits = model(src=src, src_mask=src_mask, tgt=tgt_input, tgt_mask=tgt_mask)
+
+        logits = model(src=src, tgt=tgt_input)
 
         output = logits.contiguous().reshape(-1, logits.shape[-1])
         target = tgt[1:,:].contiguous().reshape(-1)
@@ -115,9 +116,7 @@ def val_loop(val_iter, model, criterion, device):
         tgt = tgt.to(device)
 
         tgt_input = tgt[:-1, :]
-        src_mask = make_src_mask(src)
-        tgt_mask = make_trg_mask(tgt_input, device)
-        logits = model(src=src, src_mask=src_mask, tgt=tgt_input, tgt_mask=tgt_mask)
+        logits = model(src=src, tgt=tgt_input)
 
         output = logits.contiguous().reshape(-1, logits.shape[-1])
         target = tgt[1:,:].contiguous().reshape(-1)
@@ -136,9 +135,7 @@ def test(test_iter, model, criterion, device):
         tgt = tgt.to(device)
 
         tgt_input = tgt[:-1, :]
-        src_mask = make_src_mask(src)
-        tgt_mask = make_trg_mask(tgt_input, device)
-        logits = model(src=src, src_mask=src_mask, tgt=tgt_input, tgt_mask=tgt_mask)
+        logits = model(src=src, tgt=tgt_input)
 
         output = logits.contiguous().reshape(-1, logits.shape[-1])
         target = tgt[1:,:].contiguous().reshape(-1)

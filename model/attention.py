@@ -7,9 +7,9 @@ import torch.nn.functional as F
 def attention(query, key, value, mask=None, dropout=None):
     q_k = torch.matmul(query, key.transpose(-2, -1))
     scores = q_k / math.sqrt(query.size(-1))
-    # if mask is not None:
-    #     mask = mask.unsqueeze(1)
-    #     scores = scores.masked_fill(mask == 0, -1e9)
+
+    if mask is not None:
+        scores = scores.masked_fill(mask == 0, -1e9)
 
     output = F.softmax(scores, dim=-1)
     if dropout is not None:
@@ -28,9 +28,6 @@ class MultiHeadAttention(nn.Module):
 
     def forward(self, query, key, value, mask=None):
         batch_size = query.size(0)
-
-        if mask is not None:
-            mask = mask.unsqueeze(1)
 
         query, key, value = \
             [l(x).view(batch_size, -1, self.nhead, self.d_k).transpose(1, 2)
