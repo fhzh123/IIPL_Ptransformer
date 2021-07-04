@@ -1,4 +1,3 @@
-import torch
 from util import *
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,8 +9,7 @@ class SubLayer(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, sublayer):
-        attn = sublayer(self.norm(x))
-        return x + self.dropout(attn)
+        return self.norm(x + self.dropout(sublayer(x)))
 
 class Generator(nn.Module):
     def __init__(self, d_model, tgt_vocab):

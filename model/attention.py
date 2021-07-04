@@ -15,7 +15,7 @@ def attention(query, key, value, mask=None, dropout=None):
     if dropout is not None:
         output = dropout(output)
     
-    return torch.matmul(output, value), output
+    return torch.matmul(output, value)
 
 class MultiHeadAttention(nn.Module):
     def __init__(self, nhead, d_model, dropout=0.1):
@@ -34,7 +34,7 @@ class MultiHeadAttention(nn.Module):
              for l, x in zip(self.linears, (query, key, value))]
 
         # Scaled Dot-Product Attention layer
-        x, attn = attention(query, key, value, mask, self.dropout)
+        x = attention(query, key, value, mask, self.dropout)
 
         # Concatenate the nhead layers of attention outputs
         x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.nhead * self.d_k)

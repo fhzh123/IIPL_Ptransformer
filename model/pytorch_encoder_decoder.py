@@ -22,7 +22,7 @@ class Decoder(Module):
     def forward(self, tgt, memory, src_mask, tgt_mask):
 
         for layer in self.layers:
-            x = layer(tgt, memory, tgt_mask, src_mask)
+            x = layer(tgt, memory, src_mask, tgt_mask)
         return self.norm(x)
 
 class Encoder_Decoder(nn.Module):
@@ -35,6 +35,7 @@ class Encoder_Decoder(nn.Module):
 
     def forward(self, src, src_mask, tgt, tgt_mask):
         for n in range(self.N):
+            # print("from encoder_decoder: {}, {}".format(src_mask, tgt_mask))
             src = self.encoder_layers[n](src, src_mask)
             tgt = self.decoder_layers[n](tgt, src, src_mask, tgt_mask)
         return self.norm(tgt)

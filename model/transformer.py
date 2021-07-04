@@ -33,10 +33,11 @@ class o_transformer(nn.Module):
 
         # tgt_mask = [batch_size, 1, trg len, trg len]
 
-        return self.decode(self.encode(src, src_mask), tgt, src_mask, tgt_mask)
+        return self.generator(self.decode(self.encode(src, src_mask), src_mask, tgt, tgt_mask))
 
     def encode(self, src, src_mask):
         return self.encoder(self.src_embed(src), src_mask)
+
     def decode(self, memory, src_mask, tgt, tgt_mask):
         return self.decoder(self.tgt_embed(tgt), memory, src_mask, tgt_mask)
 
@@ -79,6 +80,7 @@ def make_src_mask(src):
     src_mask = (src != PAD_IDX).unsqueeze(1).unsqueeze(2)
 
     #src_mask = [batch size, 1, 1, src len]
+    # print("src_mask: {}".format(src_mask.shape))
 
     return src_mask
 
@@ -99,6 +101,7 @@ def make_trg_mask(trg, device):
     trg_mask = trg_pad_mask & trg_sub_mask
 
     #trg_mask = [batch size, 1, trg len, trg len]
+    # print("trg_mask: {}".format(trg_mask.shape))
     
     return trg_mask
 
