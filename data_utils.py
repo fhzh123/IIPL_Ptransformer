@@ -2,8 +2,8 @@ import os
 import torch
 import random
 import pandas as pd
-from fetch_tokenizers import *
 from typing import List
+from fetch_tokenizers import *
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 

@@ -12,7 +12,7 @@ def get_ko_words(sentences):
       min_cohesion_forward=0.05, 
       min_right_branching_entropy=0.0
   )
-  word_extractor.train(sentences) # list of str or like
+  word_extractor.train(sentences) # list of str
   words = word_extractor.extract()
   return words
 
