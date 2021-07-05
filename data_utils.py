@@ -2,12 +2,12 @@ import os
 import torch
 import random
 import pandas as pd
-from fetch_tokenizers import *
 from typing import List
+from fetch_tokenizers import *
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 
-PAD_IDX, SOS_IDX, EOS_IDX, UNK_IDX = 0, 1, 2, 3
+UNK_IDX, PAD_IDX, SOS_IDX, EOS_IDX = 0, 1, 2, 3
 
 def convert_to_csv(root, files):
   count = 1

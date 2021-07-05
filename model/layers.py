@@ -1,4 +1,3 @@
-import torch
 from util import *
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,8 +9,7 @@ class SubLayer(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, sublayer):
-        attn = sublayer(self.norm(x))
-        return x + self.dropout(attn)
+        return self.norm(x + self.dropout(sublayer(x)[0]))
 
 class Generator(nn.Module):
     def __init__(self, d_model, tgt_vocab):
@@ -21,9 +19,9 @@ class Generator(nn.Module):
     def forward(self, x):
         return F.log_softmax(self.proj(x), dim=-1)
 
-class EnocderLayer(nn.Module):
+class EncoderLayer(nn.Module):
     def __init__(self, size, self_attn, feed_forward, dropout):
-        super(EnocderLayer, self).__init__()
+        super(EncoderLayer, self).__init__()
         self.self_attn = self_attn
         self.feed_forward = feed_forward
         self.dropout = nn.Dropout(dropout)
@@ -43,7 +41,7 @@ class DecoderLayer(nn.Module):
         self.sublayer = clones(SubLayer(size, dropout), 3)
         self.size = size
 
-    def forward(self, x, memory, src_mask, tgt_mask):
+    def forward(self, x, memory, tgt_mask, src_mask):
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, tgt_mask))
         x = self.sublayer[1](x, lambda x: self.src_attn(x, memory, memory, src_mask))
         return self.sublayer[2](x, self.feed_forward)

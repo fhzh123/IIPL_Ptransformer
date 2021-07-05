@@ -14,17 +14,6 @@ class PositionWiseFeedForward(nn.Module):
     def forward(self, x):
         return self.w_2(self.dropout(F.relu(self.w_1(x))))
 
-class PositionwiseFeedForward(nn.Module):
-    "Implements FFN equation."
-    def __init__(self, d_model, d_ff, dropout=0.1):
-        super(PositionwiseFeedForward, self).__init__()
-        self.w_1 = nn.Linear(d_model, d_ff)
-        self.w_2 = nn.Linear(d_ff, d_model)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, x):
-        return self.w_2(self.dropout(F.relu(self.w_1(x))))
-
 class Embeddings(nn.Module):
     def __init__(self, d_model, vocab):
         super(Embeddings, self).__init__()
@@ -35,20 +24,20 @@ class Embeddings(nn.Module):
         return self.emb(x.long()) * math.sqrt(self.d_model)
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, dropout, max_len=5000):
+    def __init__(self,
+                 emb_size: int,
+                 dropout: float,
+                 maxlen: int = 5000):
         super(PositionalEncoding, self).__init__()
-        self.dropout = nn.Dropout(p=dropout)
+        den = torch.exp(- torch.arange(0, emb_size, 2)* math.log(10000) / emb_size)
+        pos = torch.arange(0, maxlen).reshape(maxlen, 1)
+        pos_embedding = torch.zeros((maxlen, emb_size))
+        pos_embedding[:, 0::2] = torch.sin(pos * den)
+        pos_embedding[:, 1::2] = torch.cos(pos * den)
+        pos_embedding = pos_embedding.unsqueeze(-2)
 
-        positional_embedding = torch.zeros((max_len, d_model))
-        position = torch.arange(0, max_len).reshape(max_len, 1)
-        div = torch.exp(torch.arange(0, d_model, 2) * -(math.log(10000) / d_model))
+        self.dropout = nn.Dropout(dropout)
+        self.register_buffer('pos_embedding', pos_embedding)
 
-        positional_embedding[:, 0::2] = torch.sin(position * div)
-        positional_embedding[:, 1::2] = torch.cos(position * div)
-        positional_embedding = positional_embedding.unsqueeze(-2)
-
-        self.register_buffer('positional_embedding', positional_embedding)
-
-    def forward(self, x):
-        x = x + self.positional_embedding[:x.size(0),:]
-        return self.dropout(x)
+    def forward(self, token_embedding):
+        return self.dropout(token_embedding + self.pos_embedding[:token_embedding.size(0), :])

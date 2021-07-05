@@ -5,14 +5,14 @@ from tokenizers import SentencePieceBPETokenizer
 from tokenizers.pre_tokenizers import Whitespace
 from torchtext.vocab import Vocab, build_vocab_from_iterator
 
-PAD_IDX, SOS_IDX, EOS_IDX, UNK_IDX = 0, 1, 2, 3
+UNK_IDX, PAD_IDX, SOS_IDX, EOS_IDX = 0, 1, 2, 3
 
 def get_ko_words(sentences):
-  word_extractor = WordExtractor(min_frequency=100,
+  word_extractor = WordExtractor(min_frequency=5,
       min_cohesion_forward=0.05, 
       min_right_branching_entropy=0.0
   )
-  word_extractor.train(sentences) # list of str or like
+  word_extractor.train(sentences) # list of str
   words = word_extractor.extract()
   return words
 
@@ -34,11 +34,11 @@ def get_BPE_tokenizer(sentences, vocab_size=20000, min_frequency=3):
 def build_vocabs(sentences, tokens):
   vocabs = {}
 
-  special_symbols = ['<pad>', '<sos>', '<eos>', '<unk>']
+  special_symbols = ['<unk>', '<pad>', '<sos>', '<eos>']
 
   for ln in ['src_lang', 'tgt_lang']:
     vocabs[ln] = build_vocab_from_iterator(iterator=yield_tokens(sentences, ln, tokens),
-                                           min_freq=3,
+                                           min_freq=1,
                                            specials=special_symbols,
                                            special_first=True)
 

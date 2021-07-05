@@ -8,7 +8,38 @@ import torch.nn.functional as F
 PAD_IDX, SOS_IDX, EOS_IDX, UNK_IDX = 0, 1, 2, 3
 
 def clones(module, N):
+    # Creates deep copies of the modules N times and store it in a list.
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
+
+def make_src_mask(src):
+    
+    #src = [batch size, src len]
+    
+    src_mask = (src == PAD_IDX)
+
+    #src_mask = [batch size, 1, 1, src len]
+
+    return src_mask
+
+def make_trg_mask(trg, device):
+
+    #trg = [batch size, trg len]
+    
+    trg_pad_mask = (trg == PAD_IDX)
+
+    #trg_pad_mask = [batch size, 1, 1, trg len]
+    
+    # trg_len = trg.shape[1]
+    
+    # trg_sub_mask = torch.tril(torch.ones((trg_len, trg_len), device = device)).bool()
+
+    # #trg_sub_mask = [trg len, trg len]
+        
+    # trg_mask = trg_pad_mask & trg_sub_mask
+
+    #trg_mask = [batch size, 1, trg len, trg len]
+    
+    return trg_pad_mask
 
 def generate_square_subsequent_mask(sz, device):
     mask = torch.triu(torch.ones((sz, sz), device=device) == 1)
@@ -22,9 +53,9 @@ def create_mask(src, tgt, device):
     tgt_mask = generate_square_subsequent_mask(tgt_seq_len, device)
     src_mask = torch.zeros((src_seq_len, src_seq_len),device=device).type(torch.bool)
 
-    src_padding_mask = (src == PAD_IDX).transpose(0, 1)
-    tgt_padding_mask = (tgt == PAD_IDX).transpose(0, 1)
-    return src_mask, tgt_mask, src_padding_mask, tgt_padding_mask
+    src_padding_mask = (src == PAD_IDX).transpose(0,1)
+    tgt_padding_mask = (tgt == PAD_IDX).transpose(0,1)
+    return src_padding_mask, tgt_padding_mask
 
 def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
     src = src.to(device)
