@@ -1,3 +1,6 @@
 .idea
 .DS_Store
 checkpoints/script_checkpoint.pth
+*.pyc
+*.pickle
+*.pkl
