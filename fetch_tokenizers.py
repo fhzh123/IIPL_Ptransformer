@@ -1,11 +1,11 @@
+from util import *
+from pickles import *
 from soynlp.word import WordExtractor
 from soynlp.tokenizer import LTokenizer
 from torchtext.data.utils import get_tokenizer
 from tokenizers import SentencePieceBPETokenizer
 from tokenizers.pre_tokenizers import Whitespace
-from torchtext.vocab import Vocab, build_vocab_from_iterator
-
-UNK_IDX, PAD_IDX, SOS_IDX, EOS_IDX = 0, 1, 2, 3
+from torchtext.vocab import build_vocab_from_iterator
 
 def get_ko_words(sentences):
   word_extractor = WordExtractor(min_frequency=5,
@@ -16,9 +16,15 @@ def get_ko_words(sentences):
   words = word_extractor.extract()
   return words
 
-def get_ko_tokenizer(sentences):
-  words = get_ko_words(sentences)
-  cohesion_score = {word:score.cohesion_forward for word, score in words.items()}
+def get_ko_tokenizer(sentences, load):
+  if not load:
+    words = get_ko_words(sentences)
+    cohesion_score = {word:score.cohesion_forward for word, score in words.items()}
+    pickle_tokenizer(cohesion_score)
+  else:
+    kor_pikcle = open('pickle_files/tokenizer.pickle', 'rb')
+    cohesion_score = pickle.load(kor_pikcle)
+
   return LTokenizer(scores=cohesion_score)
 
 def get_BPE_tokenizer(sentences, vocab_size=20000, min_frequency=3):
@@ -53,15 +59,14 @@ def yield_tokens(data_iter, language, tokens):
   for data_sample in data_iter:
       yield tokens[language](data_sample)
 
-def get_tokens(sentences, token_type):
+def get_tokens(sentences, token_type, load):
   tokens = {}
   if token_type == 2:
     ko_token = get_BPE_tokenizer(sentences['src_lang'])
     en_token = get_BPE_tokenizer(sentences['tgt_lang']) 
   else:
-    ko_token = get_ko_tokenizer(sentences['src_lang'])
+    ko_token = get_ko_tokenizer(sentences['src_lang'], load)
     en_token = get_tokenizer('spacy', language='en_core_web_sm')
 
   tokens = {'src_lang': ko_token, 'tgt_lang': en_token}
   return tokens
-

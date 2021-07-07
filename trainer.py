@@ -1,6 +1,7 @@
 import time
 import random
 from util import *
+from pickles import *
 from data_utils import *
 import torch.optim as optim
 from model.transformer import *
@@ -30,10 +31,21 @@ class Trainer:
                        }
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        kor, eng = get_kor_eng_sentences(file_path)
+
+        kor, eng = get_kor_eng_sentences(file_path, load)
         self.sentences = {'src_lang': kor, 'tgt_lang': eng}
-        self.tokens = get_tokens(self.sentences, token_type)
-        self.vocabs = build_vocabs(self.sentences, self.tokens)
+        self.tokens = get_tokens(self.sentences, token_type, load)
+        if not load:
+            self.vocabs = build_vocabs(self.sentences, self.tokens)
+            pickle_vocabs(self.vocabs)
+        else:
+            self.vocabs = {}
+            file_kor = open('pickle_files/kor.pickle', 'rb')
+            self.vocabs['src_lang'] = pickle.load(file_kor)
+            
+            file_eng = open('pickle_files/eng.pickle', 'rb')
+            self.vocabs['tgt_lang'] = pickle.load(file_eng)
+            
         train_sentences, val_sentences, self.test_sentences = divide_sentences(self.sentences)
         self.train_iter = get_train_iter(train_sentences, self.tokens, self.vocabs, self.params['batch_size'])
         self.val_iter = get_test_iter(val_sentences, self.tokens, self.vocabs, self.params['batch_size'])
@@ -47,12 +59,12 @@ class Trainer:
                                        d_model= self.params['emb_size'], d_ff=self.params['ffn_hid_dim'],
                                        device=self.device, dropout=self.params['dropout'], load=load, variation=variation)
         
-        # self.optimizer = ScheduledOptim(
-        #     optim.Adam(self.transformer.parameters(), betas=(0.9, 0.98), eps=self.params['lr']),
-        #     warmup_steps=4000,
-        #     hidden_dim=self.params['ffn_hid_dim']
-        # )
-        self.optimizer = optim.Adam(self.transformer.parameters(), betas=(0.9, 0.98), eps=self.params['lr'])
+        self.optimizer = ScheduledOptim(
+            optim.Adam(self.transformer.parameters(), betas=(0.9, 0.98), eps=self.params['lr']),
+            warmup_steps=4000,
+            hidden_dim=self.params['ffn_hid_dim']
+        )
+        # self.optimizer = optim.Adam(self.transformer.parameters(), betas=(0.9, 0.98), eps=self.params['lr'])
 
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 

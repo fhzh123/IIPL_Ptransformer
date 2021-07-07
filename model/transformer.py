@@ -18,22 +18,6 @@ class o_transformer(nn.Module):
         self.device = device
 
     def forward(self, src, tgt):
-        # src = src.transpose(0,1)
-
-        # # src = [batch size, src len]
-
-        # src_mask = make_src_mask(src)
-
-        # # src_mask = [batch_size, 1, 1, src len]
-
-        # tgt = tgt.transpose(0,1)
-
-        # # tgt = [batch size, trg len]
-
-        # tgt_mask = make_trg_mask(tgt, self.device)
-
-        # # tgt_mask = [batch_size, 1, trg len, trg len]
-        
         src_mask, tgt_mask = create_mask(
                                     src=src, 
                                     tgt=tgt, 
@@ -70,26 +54,10 @@ class p_transformer(nn.Module):
         self.device = device 
 
     def forward(self, src, tgt):
-
-        # nn.MultiheadAttention을 쓰실 경우에는 76 ~ 92 까지 안쓰시고 라인 93번만 쓰시면 됩니다. (o_transformer 동일)
-
-        src = src.transpose(0,1)
-
-        # src = [batch size, src len]
-
-        src_mask = make_src_mask(src)
-
-        # src_mask = [batch_size, 1, 1, src len]
-
-        tgt = tgt.transpose(0,1)
-
-        # tgt = [batch size, trg len]
-
-        tgt_mask = make_trg_mask(tgt, self.device)
-
-        # tgt_mask = [batch_size, 1, trg len, trg len]
-
-        # src_mask, tgt_mask = create_mask(src, tgt, self.device)
+        src_mask, tgt_mask = create_mask(
+                            src=src, 
+                            tgt=tgt, 
+                            device=self.device)
 
         return self.generator(
             self.encode_decode(
@@ -109,8 +77,8 @@ class p_transformer(nn.Module):
             )
 
 def build_model(vocabs, nhead, d_model, d_ff, N, device, dropout=0.1, variation=False, load=False):
-    attn = MultiHeadAttention(nhead, d_model, dropout)
-    # attn = nn.MultiheadAttention(d_model, nhead, dropout, device=device)
+    # attn = MultiHeadAttention(nhead, d_model, dropout)
+    attn = nn.MultiheadAttention(d_model, nhead, dropout, device=device)
     feedforward = PositionWiseFeedForward(d_model, d_ff)
     position = PositionalEncoding(d_model, dropout)
     if not variation:
@@ -154,7 +122,7 @@ def build_model(vocabs, nhead, d_model, d_ff, N, device, dropout=0.1, variation=
                               )
 
     if load:
-        state_dict = torch.load('checkpoints/script_checkpoint_inf.pth')
+        state_dict = torch.load('checkpoints/new_script_checkpoint_inf2.pth')
         model.load_state_dict(state_dict)
     else:
         for p in model.parameters():

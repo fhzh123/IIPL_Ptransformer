@@ -1,13 +1,13 @@
 import os
 import torch
 import random
+import pickle
+from util import *
 import pandas as pd
 from typing import List
 from fetch_tokenizers import *
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
-
-UNK_IDX, PAD_IDX, SOS_IDX, EOS_IDX = 0, 1, 2, 3
 
 def convert_to_csv(root, files):
   count = 1
@@ -21,16 +21,27 @@ def convert_to_csv(root, files):
   
   return csv_files
 
-def convert_to_sentences(csv_files):
+def convert_to_sentences(csv_files, load):
   dataframes = [ pd.read_csv(filepath) for filepath in csv_files ]
   
   kor_sentences = []
   eng_sentences = []
-  for data in dataframes:
-    for index, sent in data.iterrows():
-      _, kor, eng = sent
-      kor_sentences.append(kor)
-      eng_sentences.append(eng)
+  if not load:
+    for data in dataframes:
+      for index, sent in data.iterrows():
+        _, kor, eng = sent
+        kor_sentences.append(kor)
+        eng_sentences.append(eng)
+    with open('pickle_files/kor_sent.pkl', 'wb') as kor_out:
+      pickle.dump(kor_sentences, kor_out)
+    with open('pickle_files/eng_sent.pkl', 'wb') as eng_out:
+      pickle.dump(eng_sentences, eng_out)
+  else:
+    file_kor = open('pickle_files/kor_sent.pkl', 'rb')
+    kor_sentences = pickle.load(file_kor)
+    file_eng = open('pickle_files/eng_sent.pkl', 'rb')
+    eng_sentences = pickle.load(file_eng)
+
   for kor, eng in zip(kor_sentences[:5], eng_sentences[:5]):
       print(f'[KOR]: {kor}')
       print(f'[ENG]: {eng}\n')
@@ -39,11 +50,11 @@ def convert_to_sentences(csv_files):
   
   return kor_sentences, eng_sentences
 
-def get_kor_eng_sentences(file_path="data"):
+def get_kor_eng_sentences(file_path="data", load=False):
   root = "data"
   files = os.listdir("./data")
   csv_files = convert_to_csv(root, files)
-  return convert_to_sentences(csv_files)
+  return convert_to_sentences(csv_files, load)
 
 
 def divide_sentences(sentences):
