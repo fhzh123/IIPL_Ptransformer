@@ -76,11 +76,13 @@ class p_transformer(nn.Module):
             tgt_mask=tgt_mask
             )
 
+
 def build_model(vocabs, nhead, d_model, d_ff, N, device, dropout=0.1, variation=False, load=False):
     # attn = MultiHeadAttention(nhead, d_model, dropout)
     attn = nn.MultiheadAttention(d_model, nhead, dropout, device=device)
     feedforward = PositionWiseFeedForward(d_model, d_ff)
     position = PositionalEncoding(d_model, dropout)
+    generator = nn.Linear(d_model, len(vocabs['tgt_lang']))
     if not variation:
         model = o_transformer(Encoder(
                                 EncoderLayer(d_model, dc(attn), dc(feedforward), dropout), N
@@ -96,9 +98,7 @@ def build_model(vocabs, nhead, d_model, d_ff, N, device, dropout=0.1, variation=
                                   Embeddings(d_model, len(vocabs['tgt_lang'])), 
                                   dc(position)
                                   ),
-                              Generator(
-                                  d_model, len(vocabs['tgt_lang'])
-                                  ), 
+                              generator, 
                               device
                               )
     else:
@@ -107,6 +107,8 @@ def build_model(vocabs, nhead, d_model, d_ff, N, device, dropout=0.1, variation=
                                               DecoderLayer(d_model, dc(attn), dc(attn), dc(feedforward), dropout), 
                                               N
                                               ),
+                              EncoderLayer(d_model, dc(attn), dc(feedforward), dropout),
+                              DecoderLayer(d_model, dc(attn), dc(attn), dc(feedforward), dropout),
                               nn.Sequential(
                                   Embeddings(d_model, len(vocabs['src_lang'])), 
                                   dc(position)

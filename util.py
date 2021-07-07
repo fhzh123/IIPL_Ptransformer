@@ -97,7 +97,6 @@ def epoch_time(time, curr_epoch, total_epochs):
 def greedy_decode(model, src, src_mask, max_len, start_symbol, device, gen):
     src = src.to(device)
     src_mask = src_mask.to(device)
-
     trg = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(device)
     for i in range(max_len-1):
         tgt_mask = (generate_square_subsequent_mask(trg.size(0), device)

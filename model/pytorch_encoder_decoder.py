@@ -37,3 +37,4 @@ class Encoder_Decoder(nn.Module):
             src = self.encoder_layers[n](src, src_mask)
             tgt = self.decoder_layers[n](tgt, src, tgt_mask, src_mask)
         return self.norm(tgt)
+        
