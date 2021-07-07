@@ -44,7 +44,7 @@ def build_vocabs(sentences, tokens):
 
   for ln in ['src_lang', 'tgt_lang']:
     vocabs[ln] = build_vocab_from_iterator(iterator=yield_tokens(sentences, ln, tokens),
-                                           min_freq=1,
+                                           min_freq=3,
                                            specials=special_symbols,
                                            special_first=True)
 

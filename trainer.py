@@ -59,12 +59,12 @@ class Trainer:
                                        d_model= self.params['emb_size'], d_ff=self.params['ffn_hid_dim'],
                                        device=self.device, dropout=self.params['dropout'], load=load, variation=variation)
         
-        self.optimizer = ScheduledOptim(
-            optim.Adam(self.transformer.parameters(), betas=(0.9, 0.98), eps=self.params['lr']),
-            warmup_steps=4000,
-            hidden_dim=self.params['ffn_hid_dim']
-        )
-        # self.optimizer = optim.Adam(self.transformer.parameters(), betas=(0.9, 0.98), eps=self.params['lr'])
+        # self.optimizer = ScheduledOptim(
+        #     optim.Adam(self.transformer.parameters(), betas=(0.9, 0.98), eps=self.params['lr']),
+        #     warmup_steps=4000,
+        #     hidden_dim=self.params['ffn_hid_dim']
+        # )
+        self.optimizer = optim.Adam(self.transformer.parameters(), betas=(0.9, 0.98), eps=self.params['lr'])
 
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 
