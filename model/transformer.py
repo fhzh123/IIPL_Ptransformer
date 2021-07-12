@@ -1,26 +1,45 @@
 from model.embed import *
-from model.position import *
-import torch.nn as nn
 from torch.nn import Transformer
-from torch.nn import TransformerEncoderLayer, TransformerDecoderLayer, TransformerEncoder, TransformerDecoder
+from model.position import *
+from model.encoder import *
+from model.decoder import *
+import copy
+
 
 class Seq2SeqTransformer(nn.Module):
     def __init__(self,
-                 num_encoder_layers: int,
-                 num_decoder_layers: int,
-                 emb_size: int,
-                 nhead: int,
-                 src_vocab_size: int,
-                 tgt_vocab_size: int,
-                 dim_feedforward: int = 512,
-                 dropout: float = 0.1):
+                 num_encoder_layers,
+                 num_decoder_layers,
+                 emb_size,
+                 nhead,
+                 src_vocab_size,
+                 tgt_vocab_size,
+                 dim_feedforward = 512,
+                 dropout = 0.1):
         super(Seq2SeqTransformer, self).__init__()
+        self.attn = nn.MultiheadAttention(emb_size, nhead, dropout)
+        self.ff = PositionWiseFeedForward(emb_size, dim_feedforward)
         self.transformer = Transformer(d_model=emb_size,
                                        nhead=nhead,
                                        num_encoder_layers=num_encoder_layers,
                                        num_decoder_layers=num_decoder_layers,
                                        dim_feedforward=dim_feedforward,
-                                       dropout=dropout)
+                                       dropout=dropout,
+                                       custom_encoder=Encoder(EncoderLayer(
+                                                            emb_size,
+                                                            copy.deepcopy(self.attn),
+                                                            copy.deepcopy(self.ff),
+                                                            dropout
+                                            ), 
+                                       num_encoder_layers),
+                                       custom_decoder=Decoder(DecoderLayer(
+                                                            emb_size,
+                                                            copy.deepcopy(self.attn),
+                                                            self.deepcopy(self.ff),
+                                                            dropout
+                                            ),
+                                        num_decoder_layers)
+                                       )
         self.generator = nn.Linear(emb_size, tgt_vocab_size)
         self.src_tok_emb = TokenEmbedding(src_vocab_size, emb_size)
         self.tgt_tok_emb = TokenEmbedding(tgt_vocab_size, emb_size)

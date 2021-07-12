@@ -65,10 +65,10 @@ class Data:
                     _, kor, eng = sent
                     kor_sentences.append(kor)
                     eng_sentences.append(eng)
-                    with open('./data/pickles/kor_sent.pickle', 'wb') as kor_out:
-                        pickle.dump(kor_sentences, kor_out)
-                    with open('./data/pickles/eng_sent.pickle', 'wb') as eng_out:
-                        pickle.dump(eng_sentences, eng_out)
+            with open('./data/pickles/kor_sent.pickle', 'wb') as kor_out:
+                pickle.dump(kor_sentences, kor_out)
+            with open('./data/pickles/eng_sent.pickle', 'wb') as eng_out:
+                pickle.dump(eng_sentences, eng_out)
         else:
             file_kor = open('./data/pickles/kor_sent.pkl', 'rb')
             kor_sentences = pickle.load(file_kor)

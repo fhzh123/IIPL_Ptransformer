@@ -26,3 +26,20 @@ class DecoderLayer(nn.Module):
             )
 
         x = self.norm(x + self.dropout(x))
+
+        x = self.ff(x)
+
+        x = self.norm(x + self.dropout(x))
+
+        return x
+
+class Decoder(nn.Module):
+    def __init__(self, layer, N):
+        super(Decoder, self).__init__()
+        self.layers = clones(layer, N)
+
+    def forward(self, tgt, memory, memory_mask, memory_key_padding_mask, tgt_mask, tgt_key_padding_mask):
+        for layer in self.layers:
+            x = layer(tgt, memory, memory_mask, memory_key_padding_mask, tgt_mask, tgt_key_padding_mask)
+        
+        return x

@@ -18,3 +18,11 @@ class PositionalEncoding(nn.Module):
     def forward(self, token_embedding):
         return self.dropout(token_embedding + self.pos_embedding[:token_embedding.size(0), :])
 
+class PositionWiseFeedForward(nn.Module):
+    def __init__(self, emb_size, ffn_hid_dim):
+        self.w_1 = nn.Linear(emb_size, ffn_hid_dim)
+        self.w_2 = nn.Linear(ffn_hid_dim, emb_size)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        return self.w_2(self.relu(self.w_1(x)))
