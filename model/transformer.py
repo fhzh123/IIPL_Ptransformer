@@ -1,132 +1,70 @@
-from catalogue import create
-from torch import nn
-import torch.nn as nn
-from copy import deepcopy as dc
-from model.pytorch_encoder_decoder import *
-from model.attention import *
+from model.embed import *
+from torch.nn import Transformer
 from model.position import *
-from util import *
+from model.encoder import *
+from model.decoder import *
+import copy
 
-class o_transformer(nn.Module):
-    def __init__(self, encoder, decoder, src_embed, tgt_embed, generator, device):
-        super(o_transformer, self).__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-        self.src_embed = src_embed
-        self.tgt_embed = tgt_embed
-        self.generator = generator
-        self.device = device
 
-    def forward(self, src, tgt):
-        src_mask, tgt_mask = create_mask(
-                                    src=src, 
-                                    tgt=tgt, 
-                                    device=self.device)
+class Seq2SeqTransformer(nn.Module):
+    def __init__(self,
+                 num_encoder_layers,
+                 num_decoder_layers,
+                 emb_size,
+                 nhead,
+                 src_vocab_size,
+                 tgt_vocab_size,
+                 dim_feedforward = 512,
+                 dropout = 0.1):
+        super(Seq2SeqTransformer, self).__init__()
+        self.attn = nn.MultiheadAttention(emb_size, nhead, dropout)
+        self.ff = PositionWiseFeedForward(emb_size, dim_feedforward)
+        self.transformer = Transformer(d_model=emb_size,
+                                       nhead=nhead,
+                                       num_encoder_layers=num_encoder_layers,
+                                       num_decoder_layers=num_decoder_layers,
+                                       dim_feedforward=dim_feedforward,
+                                       dropout=dropout,
+                                       custom_encoder=Encoder(EncoderLayer(
+                                                            emb_size,
+                                                            copy.deepcopy(self.attn),
+                                                            copy.deepcopy(self.ff),
+                                                            dropout
+                                            ), 
+                                       num_encoder_layers),
+                                       custom_decoder=Decoder(DecoderLayer(
+                                                            emb_size,
+                                                            copy.deepcopy(self.attn),
+                                                            self.deepcopy(self.ff),
+                                                            dropout
+                                            ),
+                                        num_decoder_layers)
+                                       )
+        self.generator = nn.Linear(emb_size, tgt_vocab_size)
+        self.src_tok_emb = TokenEmbedding(src_vocab_size, emb_size)
+        self.tgt_tok_emb = TokenEmbedding(tgt_vocab_size, emb_size)
+        self.positional_encoding = PositionalEncoding(
+            emb_size, dropout=dropout)
 
-        return self.generator(
-            self.decode(
-                memory=self.encode(src, src_mask), 
-                src_mask=src_mask, 
-                tgt=tgt, 
-                tgt_mask=tgt_mask)
-            )
+    def forward(self,
+                src,
+                trg,
+                src_mask,
+                tgt_mask,
+                src_padding_mask,
+                tgt_padding_mask,
+                memory_key_padding_mask):
+        src_emb = self.positional_encoding(self.src_tok_emb(src))
+        tgt_emb = self.positional_encoding(self.tgt_tok_emb(trg))
+        outs = self.transformer(src_emb, tgt_emb, src_mask, tgt_mask, None,
+                                src_padding_mask, tgt_padding_mask, memory_key_padding_mask)
+        return self.generator(outs)
 
     def encode(self, src, src_mask):
-        return self.encoder(
-            x=self.src_embed(src), 
-            src_mask=src_mask
-            )
+        return self.transformer.encoder(self.positional_encoding(
+                            self.src_tok_emb(src)), src_mask)
 
-    def decode(self, memory, src_mask, tgt, tgt_mask):
-        return self.decoder(
-            x=self.tgt_embed(tgt), 
-            memory=memory, 
-            src_mask=src_mask, 
-            tgt_mask=tgt_mask)
-
-class p_transformer(nn.Module):
-    def __init__(self, encoder_decoder, src_embed, tgt_embed, generator, device):
-        super(p_transformer, self).__init__()
-        self.encoder_decoder = encoder_decoder
-        self.src_embed = src_embed
-        self.tgt_embed = tgt_embed
-        self.generator = generator
-        self.device = device 
-
-    def forward(self, src, tgt):
-        src_mask, tgt_mask = create_mask(
-                            src=src, 
-                            tgt=tgt, 
-                            device=self.device)
-
-        return self.generator(
-            self.encode_decode(
-                src=src, 
-                src_mask=src_mask, 
-                tgt=tgt, 
-                tgt_mask=tgt_mask
-                )
-            )
-
-    def encode_decode(self, src, src_mask, tgt, tgt_mask):
-        return self.encoder_decoder(
-            src=self.src_embed(src), 
-            src_mask=src_mask, 
-            tgt=self.tgt_embed(tgt), 
-            tgt_mask=tgt_mask
-            )
-
-
-def build_model(vocabs, nhead, d_model, d_ff, N, device, dropout=0.1, variation=False, load=False):
-    # attn = MultiHeadAttention(nhead, d_model, dropout)
-    attn = nn.MultiheadAttention(d_model, nhead, dropout, device=device)
-    feedforward = PositionWiseFeedForward(d_model, d_ff)
-    position = PositionalEncoding(d_model, dropout)
-    generator = nn.Linear(d_model, len(vocabs['tgt_lang']))
-    if not variation:
-        model = o_transformer(Encoder(
-                                EncoderLayer(d_model, dc(attn), dc(feedforward), dropout), N
-                                ), 
-                              Decoder(
-                                  DecoderLayer(d_model, dc(attn), dc(attn), dc(feedforward), dropout), N
-                                  ),
-                              nn.Sequential(
-                                  Embeddings(d_model, len(vocabs['src_lang'])), 
-                                  dc(position)
-                                  ),
-                              nn.Sequential(
-                                  Embeddings(d_model, len(vocabs['tgt_lang'])), 
-                                  dc(position)
-                                  ),
-                              generator, 
-                              device
-                              )
-    else:
-        model = p_transformer(Encoder_Decoder(
-                                              EncoderLayer(d_model, dc(attn), dc(feedforward), dropout), 
-                                              DecoderLayer(d_model, dc(attn), dc(attn), dc(feedforward), dropout), 
-                                              N
-                                              ),
-                              nn.Sequential(
-                                  Embeddings(d_model, len(vocabs['src_lang'])), 
-                                  dc(position)
-                                  ),
-                              nn.Sequential(
-                                  Embeddings(d_model, len(vocabs['tgt_lang'])), 
-                                  dc(position)
-                                  ),
-                              generator, 
-                              device
-                              )
-
-    if load:
-        state_dict = torch.load('checkpoints/new_script_checkpoint_inf2.pth')
-        model.load_state_dict(state_dict)
-    else:
-        for p in model.parameters():
-            if p.dim() > 1:
-                nn.init.xavier_uniform_(p)
-
-    model.to(device)
-
-    return model
+    def decode(self, tgt, memory, tgt_mask):
+        return self.transformer.decoder(self.positional_encoding(
+                          self.tgt_tok_emb(tgt)), memory,
+                          tgt_mask)

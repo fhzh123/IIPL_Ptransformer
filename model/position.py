@@ -1,27 +1,7 @@
-from fetch_tokenizers import PAD_IDX
 import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-class PositionWiseFeedForward(nn.Module):
-    def __init__(self, d_model, d_ff, dropout=0.1):
-        super(PositionWiseFeedForward, self).__init__()
-        self.w_1 = nn.Linear(d_model, d_ff)
-        self.w_2 = nn.Linear(d_ff, d_model)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, x):
-        return self.w_2(self.dropout(F.relu(self.w_1(x))))
-
-class Embeddings(nn.Module):
-    def __init__(self, d_model, vocab):
-        super(Embeddings, self).__init__()
-        self.emb = nn.Embedding(vocab, d_model, padding_idx=PAD_IDX)
-        self.d_model = d_model
-
-    def forward(self, x):
-        return self.emb(x.long()) * math.sqrt(self.d_model)
 
 class PositionalEncoding(nn.Module):
     def __init__(self, emb_size, dropout, maxlen = 5000):
@@ -38,3 +18,11 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, token_embedding):
         return self.dropout(token_embedding + self.pos_embedding[:token_embedding.size(0), :])
+
+class PositionWiseFeedForward(nn.Module):
+    def __init__(self, emb_size, ffn_hid_dim):
+        self.w_1 = nn.Linear(emb_size, ffn_hid_dim)
+        self.w_2 = nn.Linear(ffn_hid_dim, emb_size)
+
+    def forward(self, x):
+        return self.w_2(F.gelu(self.w_1(x)))
