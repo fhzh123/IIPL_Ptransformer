@@ -1,6 +1,7 @@
 import time
 import random
 import numpy as np
+#FIXME: *에서 함수 이름으로 바꾸기
 from util import *
 from data_util import *
 import torch.optim as optim

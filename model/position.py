@@ -1,6 +1,7 @@
 import math
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class PositionalEncoding(nn.Module):
     def __init__(self, emb_size, dropout, maxlen = 5000):
@@ -22,7 +23,6 @@ class PositionWiseFeedForward(nn.Module):
     def __init__(self, emb_size, ffn_hid_dim):
         self.w_1 = nn.Linear(emb_size, ffn_hid_dim)
         self.w_2 = nn.Linear(ffn_hid_dim, emb_size)
-        self.relu = nn.ReLU()
 
     def forward(self, x):
-        return self.w_2(self.relu(self.w_1(x)))
+        return self.w_2(F.gelu(self.w_1(x)))
