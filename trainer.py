@@ -20,7 +20,9 @@ class Trainer:
                  emb_size, nhead, ffn_hid_dim, batch_size,
                  n_layers, dropout, load, variation):
         super(Trainer, self).__init__()
+
         self.data = Data(load, batch_size)
+        
         self.params = {'num_epoch': num_epoch,
                        'emb_size': emb_size,
                        'nhead': nhead,
@@ -48,31 +50,31 @@ class Trainer:
 
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 
-        def train(self):
-            print("\nbegin training...")
+    def train(self):
+        print("\nbegin training...")
 
-            for epoch in range(self.params['num_epoch']):
-                start_time = time.time()
+        for epoch in range(self.params['num_epoch']):
+            start_time = time.time()
 
-                epoch_loss = train_loop(self.data.train_iter, self.transformer, self.optimizer, self.criterion, self.device)
-                val_loss = val_loop(self.data.val_iter, self.transformer, self.criterion, self.device)
+            epoch_loss = train_loop(self.data.train_iter, self.transformer, self.optimizer, self.criterion, self.device)
+            val_loss = val_loop(self.data.val_iter, self.transformer, self.criterion, self.device)
 
-                end_time = time.time()
+            end_time = time.time()
 
-                if (epoch + 1) % 2 == 0:
-                    test(self.data.test_iter, self.transformer, self.criterion, self.device)
+            if (epoch + 1) % 2 == 0:
+                test(self.data.test_iter, self.transformer, self.criterion, self.device)
 
-                if (epoch + 1) % 2 == 0:
-                    get_bleu(self.data.test, self.transformer, self.vocabs, self.text_transform, self.device)
+            if (epoch + 1) % 2 == 0:
+                get_bleu(self.data.test, self.transformer, self.vocabs, self.text_transform, self.device)
 
-                minutes, seconds, time_left_min, time_left_sec = epoch_time(end_time-start_time, epoch, self.params['num_epoch'])
-            
-                print("Epoch: {} out of {}".format(epoch+1, self.params['num_epoch']))
-                print("Train_loss: {} - Val_loss: {} - Epoch time: {}m {}s - Time left for training: {}m {}s"\
-                .format(round(epoch_loss, 3), round(val_loss, 3), minutes, seconds, time_left_min, time_left_sec))
+            minutes, seconds, time_left_min, time_left_sec = epoch_time(end_time-start_time, epoch, self.params['num_epoch'])
+        
+            print("Epoch: {} out of {}".format(epoch+1, self.params['num_epoch']))
+            print("Train_loss: {} - Val_loss: {} - Epoch time: {}m {}s - Time left for training: {}m {}s"\
+            .format(round(epoch_loss, 3), round(val_loss, 3), minutes, seconds, time_left_min, time_left_sec))
 
-            torch.save(self.transformer.state_dict(), 'data/checkpoints/checkpoint.pth')
-            torch.save(self.transformer, 'data/checkpoints/checkpoint.pt')
+        torch.save(self.transformer.state_dict(), 'data/checkpoints/checkpoint.pth')
+        torch.save(self.transformer, 'data/checkpoints/checkpoint.pt')
 
 def train_loop(train_iter, model, optimizer, criterion, device):
     epoch_loss = 0
@@ -157,7 +159,6 @@ def get_bleu(sentences, model, vocabs, text_transform, device):
 
     print('BLEU score -> {}'.format(bleu_scores/len(sentences['src_lang'])))
 
-        
 
 class ScheduledOptim:
     def __init__(self, optimizer, warmup_steps, hidden_dim):
