@@ -21,9 +21,10 @@ def get_text_transform(tokens, vocabs):
 	text_transform = {}
 	for ln in ['src_lang', 'tgt_lang']:
 		text_transform[ln] = sequential_transforms(
-																				tokens[ln], 
-																				vocabs[ln], 
-																				tensor_transform)
+											tokens[ln], 
+											vocabs[ln], 
+											tensor_transform
+											)
 	return text_transform
 
 

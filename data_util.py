@@ -8,7 +8,7 @@ from data_loader import *
 class Data:
     def __init__(self, load, batch_size):
         super(Data, self).__init__()
-        self.root = "./data"
+        self.root = "./data/excels"
         self.load = load
         self.train, self.val, self.test = self.get_sentences()
         self.tokens = self.get_tokens()
@@ -32,14 +32,14 @@ class Data:
                                      self.vocabs,
                                      batch_size
                                      )
-        
+
     def get_sentences(self):
         csv_files = None
         if not self.load:
             files = os.listdir("./data/excels")
-            csv_files = self.convert_to_csv(self, files)
+            csv_files = self.convert_to_csv(files)
             
-        sentences = self.convert_to_sentences(self, csv_files)
+        sentences = self.convert_to_sentences(csv_files)
         return sentences
 
     def convert_to_csv(self, files):
