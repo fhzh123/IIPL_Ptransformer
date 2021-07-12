@@ -1,7 +1,7 @@
 import pickle
 import torchtext.vocab as tt
 
-UNK_IDX, PAD_IDX, SOS_IDX, EOS_IDX = 0, 1, 2, 3
+UNK_IDX, PAD_IDX, BOS_IDX, EOS_IDX = 0, 1, 2, 3
 
 def build_vocabs(sentences, tokens):
   vocabs = {}

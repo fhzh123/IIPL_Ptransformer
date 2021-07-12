@@ -6,7 +6,7 @@ from model.decoder import *
 import copy
 
 
-class Seq2SeqTransformer(nn.Module):
+class IIPL_Transformer(nn.Module):
     def __init__(self,
                  num_encoder_layers,
                  num_decoder_layers,
@@ -14,9 +14,9 @@ class Seq2SeqTransformer(nn.Module):
                  nhead,
                  src_vocab_size,
                  tgt_vocab_size,
-                 dim_feedforward = 512,
+                 dim_feedforward,
                  dropout = 0.1):
-        super(Seq2SeqTransformer, self).__init__()
+        super(IIPL_Transformer, self).__init__()
         self.attn = nn.MultiheadAttention(emb_size, nhead, dropout)
         self.ff = PositionWiseFeedForward(emb_size, dim_feedforward)
         self.transformer = Transformer(d_model=emb_size,
@@ -38,13 +38,14 @@ class Seq2SeqTransformer(nn.Module):
                                                             self.deepcopy(self.ff),
                                                             dropout
                                             ),
-                                        num_decoder_layers)
+                                       num_decoder_layers)
                                        )
         self.generator = nn.Linear(emb_size, tgt_vocab_size)
         self.src_tok_emb = TokenEmbedding(src_vocab_size, emb_size)
         self.tgt_tok_emb = TokenEmbedding(tgt_vocab_size, emb_size)
         self.positional_encoding = PositionalEncoding(
-            emb_size, dropout=dropout)
+            emb_size, dropout=dropout
+            )
 
     def forward(self,
                 src,

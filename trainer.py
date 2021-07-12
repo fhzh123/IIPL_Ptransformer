@@ -1,14 +1,16 @@
 import time
+import torch
 import random
 import numpy as np
-#FIXME: *에서 함수 이름으로 바꾸기
-from util import *
-from data_util import *
+import torch.nn as nn
 import torch.optim as optim
-from model.transformer import *
 import nltk.translate.bleu_score as bs
+from model.transformer import IIPL_Transformer
+from util import epoch_time, translate, PAD_IDX
+from torch.utils.data import DataLoader
+from temp_data import get_tokens, get_vocabs, get_text_transform, Multi30k, pad_sequence
 
-SEED = 981126
+SEED = 970308
 
 random.seed(SEED)
 np.random.seed(SEED)
@@ -22,9 +24,10 @@ class Trainer:
                  n_layers, dropout, load, variation):
         super(Trainer, self).__init__()
 
-        self.data = Data(load, batch_size)
+        # self.data = Data(load, batch_size)
         
-        self.params = {'num_epoch': num_epoch,
+        self.params = {
+                       'num_epoch': num_epoch,
                        'emb_size': emb_size,
                        'nhead': nhead,
                        'ffn_hid_dim': ffn_hid_dim,
@@ -36,10 +39,45 @@ class Trainer:
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        self.params['src_vocab_size'] = len(self.data.vocabs['src_lang'])
-        self.params['tgt_vocab_size'] = len(self.data.vocabs['tgt_lang'])
+        self.tokens = get_tokens()
+        self.vocabs = get_vocabs(self.tokens)
+        self.text_transform = get_text_transform(self.tokens, self.vocabs)
 
-        self.transformer = Seq2SeqTransformer(self.params['n_layers'], self.params['n_layers'], self.params['emb_size'],
+        def collate_fn(batch):
+            src_batch, tgt_batch = [], []
+            for src_sample, tgt_sample in batch:
+                src_batch.append(self.text_transform['src_lang'](src_sample.rstrip("\n")))
+                tgt_batch.append(self.text_transform['tgt_lang'](tgt_sample.rstrip("\n")))
+                
+            src_batch = pad_sequence(src_batch, padding_value=PAD_IDX)
+            tgt_batch = pad_sequence(tgt_batch, padding_value=PAD_IDX)
+            return src_batch, tgt_batch
+
+        self.params['src_vocab_size'] = len(self.vocabs['src_lang'])
+        self.params['tgt_vocab_size'] = len(self.vocabs['tgt_lang'])
+
+        self.train = Multi30k(split='train')
+        self.val = Multi30k(split='valid')
+        self.test = Multi30k(split='test')
+
+        self.train_iter = DataLoader(
+                            self.train, 
+                            self.params['batch_size'], 
+                            True, 
+                            collate_fn=collate_fn(text_transform=self.text_transform)
+                            )
+        self.val_iter = DataLoader(
+                            self.val, 
+                            self.params['batch_size'], 
+                            collate_fn=collate_fn(text_transform=self.text_transform)
+                            )
+        self.test_iter = DataLoader(
+                            self.test, 
+                            self.params['batch_size'], 
+                            collate_fn=collate_fn(text_transform=self.text_transform)
+                            )
+
+        self.transformer = IIPL_Transformer(self.params['n_layers'], self.params['n_layers'], self.params['emb_size'],
                                               self.params['nhead'], self.params['src_vocab_size'], self.params['tgt_vocab_size'],
                                               self.params['ffn_hid_dim'], self.params['dropout'])
 
@@ -57,16 +95,16 @@ class Trainer:
         for epoch in range(self.params['num_epoch']):
             start_time = time.time()
 
-            epoch_loss = train_loop(self.data.train_iter, self.transformer, self.optimizer, self.criterion, self.device)
-            val_loss = val_loop(self.data.val_iter, self.transformer, self.criterion, self.device)
+            epoch_loss = train_loop(self.train_iter, self.transformer, self.optimizer, self.criterion, self.device)
+            val_loss = val_loop(self.val_iter, self.transformer, self.criterion, self.device)
 
             end_time = time.time()
 
             if (epoch + 1) % 2 == 0:
-                test(self.data.test_iter, self.transformer, self.criterion, self.device)
+                test(self.test_iter, self.transformer, self.criterion, self.device)
 
             if (epoch + 1) % 2 == 0:
-                get_bleu(self.data.test, self.transformer, self.vocabs, self.text_transform, self.device)
+                get_bleu(self.test, self.transformer, self.vocabs, self.text_transform, self.device)
 
             minutes, seconds, time_left_min, time_left_sec = epoch_time(end_time-start_time, epoch, self.params['num_epoch'])
         
@@ -79,10 +117,13 @@ class Trainer:
 
 def train_loop(train_iter, model, optimizer, criterion, device):
     epoch_loss = 0
+
     model.train()
     for src, tgt in train_iter:
         src = src.to(device)
         tgt = tgt.to(device)
+
+        print(src.shape, tgt.shape)
 
         tgt_input = tgt[:-1,:]
 
@@ -152,7 +193,8 @@ def get_bleu(sentences, model, vocabs, text_transform, device):
             src_sentence = ko,
             vocabs = vocabs, 
             text_transform = text_transform, 
-            device = device).split()
+            device = device
+            ).split()
         ref = eng.split()
 
         count += 1

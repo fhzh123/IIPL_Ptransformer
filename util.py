@@ -1,7 +1,8 @@
-from vocabs import PAD_IDX, EOS_IDX, SOS_IDX
-import torch.nn as nn
-import torch
 import copy
+import torch
+import torch.nn as nn
+
+UNK_IDX, PAD_IDX, BOS_IDX, EOS_IDX = 0, 1, 2, 3
 
 def clones(module, N):
     return nn.ModuleList([ copy.deepcopy(module) for _ in range(N) ])
@@ -32,42 +33,34 @@ def epoch_time(time, curr_epoch, total_epochs):
     time_left_sec = int(time_left % 60)
 
     return minutes, seconds, time_left_min, time_left_sec    
-    
-def greedy_decode(model, src, src_mask, max_len, start_symbol, device, gen):
+
+def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
     src = src.to(device)
     src_mask = src_mask.to(device)
-    trg = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(device)
-    for i in range(max_len-1):
-        tgt_mask = (generate_square_subsequent_mask(trg.size(0), device)
-                    .type(torch.bool)).to(device)
-        # encoded = model.encode(src=src, src_mask=src_mask)
-        with torch.no_grad():
-            out = model.encode_decode(src = src,
-                                      src_mask = src_mask,
-                                      tgt = trg,
-                                      tgt_mask = tgt_mask
-                                      )
-            # out = model.decode(x=trg, memory=encoded, src_mask=src_mask, tgt_mask=tgt_mask)
-            out = out.transpose(0, 1)
-            prob = gen(out[:,-1])
-            # prob = model.generator(out[:, -1])
-            _, next_word = torch.max(prob, dim=1)
-            next_word = next_word.item()
 
-        trg = torch.cat([trg,
+    memory = model.encode(src, src_mask)
+    ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(device)
+    for i in range(max_len-1):
+        memory = memory.to(device)
+        tgt_mask = (generate_square_subsequent_mask(ys.size(0))
+                    .type(torch.bool)).to(device)
+        out = model.decode(ys, memory, tgt_mask)
+        out = out.transpose(0, 1)
+        prob = model.generator(out[:, -1])
+        _, next_word = torch.max(prob, dim=1)
+        next_word = next_word.item()
+
+        ys = torch.cat([ys,
                         torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=0)
         if next_word == EOS_IDX:
             break
-    return trg
+    return ys
 
-
-# actual function to translate input sentence into target language
-def translate(model, text_transform, src_sentence, vocabs, device):
+def translate(model, src_sentence, text_transform, vocabs):
     model.eval()
-    gen = nn.Linear(512, len(vocabs['tgt_lang'])).to(device)
     src = text_transform['src_lang'](src_sentence).view(-1, 1)
     num_tokens = src.shape[0]
-    src_mask = (torch.zeros(1, num_tokens)).type(torch.bool)
+    src_mask = (torch.zeros(num_tokens, num_tokens)).type(torch.bool)
     tgt_tokens = greedy_decode(
-        model,  src, src_mask, max_len=num_tokens + 5, start_symbol=SOS_IDX, device=device, gen=gen).flatten()
-    return " ".join(vocabs['tgt_lang'].lookup_tokens(list(tgt_tokens.cpu().numpy()))).replace("<sos>", "").replace("<eos>", "")
+        model,  src, src_mask, max_len=num_tokens + 5, start_symbol=BOS_IDX).flatten()
+    return " ".join(vocabs['tgt_lang'].lookup_tokens(list(tgt_tokens.cpu().numpy()))).replace("<bos>", "").replace("<eos>", "")
