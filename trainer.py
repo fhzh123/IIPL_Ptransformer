@@ -1,8 +1,8 @@
 import time
 import random
+import numpy as np
 from util import *
-from pickles import *
-from data_utils import *
+from data_util import *
 import torch.optim as optim
 from model.transformer import *
 import nltk.translate.bleu_score as bs
@@ -15,11 +15,12 @@ torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 
-
 class Trainer:
-    def __init__(self, file_path, num_epoch, lr,
-                 emb_size, nhead, ffn_hid_dim, batch_size, 
-                 n_layers, dropout, token_type, load, variation):
+    def __init__(self, num_epoch, lr,
+                 emb_size, nhead, ffn_hid_dim, batch_size,
+                 n_layers, dropout, load, variation):
+        super(Trainer, self).__init__()
+        self.data = Data(load, batch_size)
         self.params = {'num_epoch': num_epoch,
                        'emb_size': emb_size,
                        'nhead': nhead,
@@ -32,67 +33,46 @@ class Trainer:
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        kor, eng = get_kor_eng_sentences(file_path, load)
-        self.sentences = {'src_lang': kor, 'tgt_lang': eng}
-        self.tokens = get_tokens(self.sentences, token_type, load)
-        if not load:
-            self.vocabs = build_vocabs(self.sentences, self.tokens)
-            pickle_vocabs(self.vocabs)
-        else:
-            self.vocabs = {}
-            file_kor = open('pickle_files/kor.pickle', 'rb')
-            self.vocabs['src_lang'] = pickle.load(file_kor)
-            
-            file_eng = open('pickle_files/eng.pickle', 'rb')
-            self.vocabs['tgt_lang'] = pickle.load(file_eng)
-            
-        train_sentences, val_sentences, self.test_sentences = divide_sentences(self.sentences)
-        self.train_iter = get_train_iter(train_sentences, self.tokens, self.vocabs, self.params['batch_size'])
-        self.val_iter = get_test_iter(val_sentences, self.tokens, self.vocabs, self.params['batch_size'])
-        self.test_iter = get_test_iter(self.test_sentences, self.tokens, self.vocabs, self.params['batch_size'])
+        self.params['src_vocab_size'] = len(self.data.vocabs['src_lang'])
+        self.params['tgt_vocab_size'] = len(self.data.vocabs['tgt_lang'])
 
+        self.transformer = Seq2SeqTransformer(self.params['n_layers'], self.params['n_layers'], self.params['emb_size'],
+                                              self.params['nhead'], self.params['src_vocab_size'], self.params['tgt_vocab_size'],
+                                              self.params['ffn_hid_dim'], self.params['dropout'])
 
-        self.params['src_vocab_size'] = len(self.vocabs['src_lang'])
-        self.params['tgt_vocab_size'] = len(self.vocabs['tgt_lang'])
-  
-        self.transformer = build_model(vocabs=self.vocabs, nhead=self.params['nhead'], N=self.params['n_layers'],
-                                       d_model= self.params['emb_size'], d_ff=self.params['ffn_hid_dim'],
-                                       device=self.device, dropout=self.params['dropout'], load=load, variation=variation)
-        
-        # self.optimizer = ScheduledOptim(
-        #     optim.Adam(self.transformer.parameters(), betas=(0.9, 0.98), eps=self.params['lr']),
-        #     warmup_steps=4000,
-        #     hidden_dim=self.params['ffn_hid_dim']
-        # )
-        self.optimizer = optim.Adam(self.transformer.parameters(), betas=(0.9, 0.98), eps=self.params['lr'])
+        self.optimizer = ScheduledOptim(
+            optim.Adam(self.transformer.parameters(), betas=(0.9, 0.98), eps=self.params['lr']),
+            warmup_steps=4000,
+            hidden_dim=self.params['ffn_hid_dim']
+        )
 
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 
-    def train(self):
-        print("\nbegin training...")
+        def train(self):
+            print("\nbegin training...")
 
-        for epoch in range(self.params['num_epoch']):
-            start_time = time.time()
+            for epoch in range(self.params['num_epoch']):
+                start_time = time.time()
 
-            epoch_loss = train_loop(self.train_iter, self.transformer, self.optimizer, self.criterion, self.device)
-            val_loss = val_loop(self.val_iter, self.transformer, self.criterion, self.device)
+                epoch_loss = train_loop(self.data.train_iter, self.transformer, self.optimizer, self.criterion, self.device)
+                val_loss = val_loop(self.data.val_iter, self.transformer, self.criterion, self.device)
 
-            end_time = time.time()
+                end_time = time.time()
 
-            if (epoch + 1) % 5 == 0:
-                test(self.test_iter, self.transformer, self.criterion, self.device)
+                if (epoch + 1) % 2 == 0:
+                    test(self.data.test_iter, self.transformer, self.criterion, self.device)
 
-            # if (epoch + 1) % 10 == 0:
-            #     get_bleu(self.test_sentences, self.transformer, self.vocabs, self.text_transform, self.device)
+                if (epoch + 1) % 2 == 0:
+                    get_bleu(self.data.test, self.transformer, self.vocabs, self.text_transform, self.device)
 
-            minutes, seconds, time_left_min, time_left_sec = epoch_time(end_time-start_time, epoch, self.params['num_epoch'])
+                minutes, seconds, time_left_min, time_left_sec = epoch_time(end_time-start_time, epoch, self.params['num_epoch'])
             
-            print("Epoch: {} out of {}".format(epoch+1, self.params['num_epoch']))
-            print("Train_loss: {} - Val_loss: {} - Epoch time: {}m {}s - Time left for training: {}m {}s"\
-            .format(round(epoch_loss, 3), round(val_loss, 3), minutes, seconds, time_left_min, time_left_sec))
+                print("Epoch: {} out of {}".format(epoch+1, self.params['num_epoch']))
+                print("Train_loss: {} - Val_loss: {} - Epoch time: {}m {}s - Time left for training: {}m {}s"\
+                .format(round(epoch_loss, 3), round(val_loss, 3), minutes, seconds, time_left_min, time_left_sec))
 
-        torch.save(self.transformer.state_dict(), 'checkpoints/new_script_checkpoint_inf2.pth')
-        torch.save(self.transformer, 'checkpoints/new_script_checkpoint_mod2.pt')
+            torch.save(self.transformer.state_dict(), 'data/checkpoints/checkpoint.pth')
+            torch.save(self.transformer, 'data/checkpoints/checkpoint.pt')
 
 def train_loop(train_iter, model, optimizer, criterion, device):
     epoch_loss = 0
@@ -164,16 +144,20 @@ def get_bleu(sentences, model, vocabs, text_transform, device):
 
     count = 0
     for ko, eng in zip(sentences['src_lang'], sentences['tgt_lang']):
-        candidate = translate(model, ko, vocabs, text_transform, device).split()
+        candidate = translate(
+            model = model,
+            src_sentence = ko,
+            vocabs = vocabs, 
+            text_transform = text_transform, 
+            device = device).split()
         ref = eng.split()
 
         count += 1
         bleu_scores += bs.sentence_bleu([ref], candidate, smoothing_function=chencherry.method2) 
-        print(bleu_scores)
-        print(count)
 
     print('BLEU score -> {}'.format(bleu_scores/len(sentences['src_lang'])))
 
+        
 
 class ScheduledOptim:
     def __init__(self, optimizer, warmup_steps, hidden_dim):
