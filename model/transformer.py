@@ -19,27 +19,13 @@ class IIPL_Transformer(nn.Module):
         super(IIPL_Transformer, self).__init__()
         self.attn = nn.MultiheadAttention(emb_size, nhead, dropout)
         self.ff = PositionWiseFeedForward(emb_size, dim_feedforward)
-        self.transformer = Transformer(d_model=emb_size,
-                                       nhead=nhead,
-                                       num_encoder_layers=num_encoder_layers,
-                                       num_decoder_layers=num_decoder_layers,
-                                       dim_feedforward=dim_feedforward,
-                                       dropout=dropout,
-                                       custom_encoder=Encoder(EncoderLayer(
-                                                            emb_size,
-                                                            copy.deepcopy(self.attn),
-                                                            copy.deepcopy(self.ff),
-                                                            dropout
-                                            ), 
-                                       num_encoder_layers),
-                                       custom_decoder=Decoder(DecoderLayer(
-                                                            emb_size,
-                                                            copy.deepcopy(self.attn),
-                                                            self.deepcopy(self.ff),
-                                                            dropout
-                                            ),
-                                       num_decoder_layers)
-                                       )
+        self.dropout = nn.Dropout(dropout)
+        self.encoder = Encoder(
+            EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), copy.deepcopy(self.dropout)), num_encoder_layers
+        )
+        self.decoder = Decoder(
+            DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), copy.deepcopy(self.dropout)), num_decoder_layers
+        )
         self.generator = nn.Linear(emb_size, tgt_vocab_size)
         self.src_tok_emb = TokenEmbedding(src_vocab_size, emb_size)
         self.tgt_tok_emb = TokenEmbedding(tgt_vocab_size, emb_size)
@@ -57,15 +43,11 @@ class IIPL_Transformer(nn.Module):
                 memory_key_padding_mask):
         src_emb = self.positional_encoding(self.src_tok_emb(src))
         tgt_emb = self.positional_encoding(self.tgt_tok_emb(trg))
-        outs = self.transformer(src_emb, tgt_emb, src_mask, tgt_mask, None,
-                                src_padding_mask, tgt_padding_mask, memory_key_padding_mask)
+        outs = self.decode(tgt_emb, self.encode(src_emb, src_mask, src_padding_mask), src_mask, memory_key_padding_mask, tgt_mask, tgt_padding_mask)
         return self.generator(outs)
 
-    def encode(self, src, src_mask):
-        return self.transformer.encoder(self.positional_encoding(
-                            self.src_tok_emb(src)), src_mask)
+    def encode(self, src, src_mask, src_padding_mask):
+        return self.encoder(src, src_mask, src_padding_mask)
 
-    def decode(self, tgt, memory, tgt_mask):
-        return self.transformer.decoder(self.positional_encoding(
-                          self.tgt_tok_emb(tgt)), memory,
-                          tgt_mask)
+    def decode(self, tgt, memory, src_mask, memory_key_padding_mask, tgt_mask, tgt_padding_mask):
+        return self.decoder(tgt, memory, src_mask, memory_key_padding_mask, tgt_mask, tgt_padding_mask)
