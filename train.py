@@ -5,7 +5,7 @@ def main(param):
     model = trainer.Trainer(load=param.load, emb_size=param.emb_size, num_epoch=param.num_epoch, nhead=param.nhead, 
                             ffn_hid_dim=param.ffn_hid_dim, batch_size=param.batch_size, lr=param.learning_rate,
                             n_layers=param.n_layers, dropout=param.dropout, variation=param.variation)
-    model.train()
+    model.learn()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Transformer Machine Translation')

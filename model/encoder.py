@@ -8,7 +8,7 @@ class EncoderLayer(nn.Module):
         self.attn = attn
         self.ff =  feedforward
         self.norm = nn.LayerNorm(embed_size, 1e-6)
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = dropout
 
     def forward(self, src, src_mask, key_padding_mask):
         # MultiheadAttention
@@ -18,7 +18,7 @@ class EncoderLayer(nn.Module):
         x = self.norm(x + self.dropout(x))
 
         # FeedForward 
-        x = self.feedforward(x)
+        x = self.ff(x)
 
         # Sublayer Connection
         x = self.norm(x + self.dropout(x))

@@ -8,10 +8,10 @@ class DecoderLayer(nn.Module):
         self.attn = attn
         self.ff= feedforward
         self.norm = nn.LayerNorm(embed_size, 1e-6)
-        self.dropout = nn.Dropout(dropout)
-
+        self.dropout = dropout
+        
     def forward(self, tgt, memory, memory_mask, memory_key_padding_mask, tgt_mask, tgt_key_padding_mask):
-        x = self.attn(
+        x, _ = self.attn(
                  tgt, tgt, tgt, 
                  attn_mask = tgt_mask,
                  key_padding_mask = tgt_key_padding_mask
@@ -19,9 +19,8 @@ class DecoderLayer(nn.Module):
 
         x = self.norm(x + self.dropout(x))
 
-        x = self.attn(
-                 memory, memory, tgt,
-                 attn_mask = memory_mask,
+        x, _= self.attn(
+                 tgt, memory, memory,
                  key_padding_mask = memory_key_padding_mask
             )
 
