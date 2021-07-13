@@ -26,6 +26,7 @@ class IIPL_Transformer(nn.Module):
         self.decoder = Decoder(
             DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), copy.deepcopy(self.dropout)), num_decoder_layers
         )
+        self.transformer = Transformer(emb_size, nhead, num_encoder_layers, num_decoder_layers, dim_feedforward, dropout, activation="gelu")
         self.generator = nn.Linear(emb_size, tgt_vocab_size)
         self.src_tok_emb = TokenEmbedding(src_vocab_size, emb_size)
         self.tgt_tok_emb = TokenEmbedding(tgt_vocab_size, emb_size)
