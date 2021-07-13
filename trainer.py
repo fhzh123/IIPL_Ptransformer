@@ -61,7 +61,7 @@ class Trainer:
         #     warmup_steps=4000,
         #     hidden_dim=self.params['ffn_hid_dim']
         # )
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=5e-5)
 
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 
@@ -79,8 +79,9 @@ class Trainer:
                 return src_batch, tgt_batch
                 
         def temp_collate(batch):
-            src, tgt = batch[0].rstrip("\n"), batch[1].rstrip("\n")
-            return src, tgt
+            tup = batch[0]
+
+            return tup[0].rstrip("\n"), tup[1].rstrip("\n")
 
         for epoch in range(self.params['num_epoch']):
             start_time = time.time()
@@ -243,7 +244,6 @@ def get_bleu(sentences, model, vocabs, text_transform, device):
         ref = eng.split()
 
         count += 1
-        print(candidate, ref)
         bleu_scores += bs.sentence_bleu([ref], candidate, smoothing_function=chencherry.method2) 
 
     print('BLEU score -> {}'.format(bleu_scores/len(sentences)))

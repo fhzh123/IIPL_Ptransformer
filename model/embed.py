@@ -3,9 +3,9 @@ import torch
 import torch.nn as nn
 from torch.nn.modules.sparse import Embedding
 
-class TokenEmbedding(nn.Module):
+class Embedding(nn.Module):
     def __init__(self, vocab_size: int, emb_size):
-        super(TokenEmbedding, self).__init__()
+        super(Embedding, self).__init__()
         self.embedding = nn.Embedding(vocab_size, emb_size)
         self.emb_size = emb_size
 

@@ -44,7 +44,7 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
     ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(device)
     for i in range(max_len-1):
         memory = memory.to(device)
-        tgt_mask = (generate_square_subsequent_mask(ys.size(0))
+        tgt_mask = (generate_square_subsequent_mask(ys.size(0), device)
                     .type(torch.bool)).to(device)
         out = model.decode(ys, memory, tgt_mask)
         out = out.transpose(0, 1)
@@ -58,11 +58,11 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
             break
     return ys
 
-def translate(model, src_sentence, text_transform, vocabs):
+def translate(model, src_sentence, text_transform, vocabs, device):
     model.eval()
     src = text_transform['src_lang'](src_sentence).view(-1, 1)
     num_tokens = src.shape[0]
     src_mask = (torch.zeros(num_tokens, num_tokens)).type(torch.bool)
     tgt_tokens = greedy_decode(
-        model,  src, src_mask, max_len=num_tokens + 5, start_symbol=BOS_IDX).flatten()
+        model,  src, src_mask, max_len=num_tokens + 5, start_symbol=BOS_IDX, device=device).flatten()
     return " ".join(vocabs['tgt_lang'].lookup_tokens(list(tgt_tokens.cpu().numpy()))).replace("<bos>", "").replace("<eos>", "")

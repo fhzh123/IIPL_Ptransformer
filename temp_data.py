@@ -27,9 +27,7 @@ def get_vocabs(tokens):
                                     min_freq=1,
                                     specials=special_symbols,
                                     special_first=True
-                                    )
-
-        vocabs[ln].set_default_index(UNK_IDX)
+                                    ).set_default_index(UNK_IDX)
 
     return vocabs
 
