@@ -6,10 +6,6 @@ from torchtext.vocab import build_vocab_from_iterator
 
 UNK_IDX, PAD_IDX, BOS_IDX, EOS_IDX = 0, 1, 2, 3
 
-# Place-holders
-token_transform = {}
-vocab_transform = {}
-
 def get_tokens():
     tokens = {}
 

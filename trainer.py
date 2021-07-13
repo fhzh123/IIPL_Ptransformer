@@ -43,46 +43,8 @@ class Trainer:
         self.vocabs = get_vocabs(self.tokens)
         self.text_transform = get_text_transform(self.tokens, self.vocabs)
 
-        def collate_fn(batch):
-            src_batch, tgt_batch = [], []
-            for src_sample, tgt_sample in batch:
-                src_batch.append(self.text_transform['src_lang'](src_sample.rstrip("\n")))
-                tgt_batch.append(self.text_transform['tgt_lang'](tgt_sample.rstrip("\n")))
-                
-            src_batch = pad_sequence(src_batch, padding_value=PAD_IDX)
-            tgt_batch = pad_sequence(tgt_batch, padding_value=PAD_IDX)
-            return src_batch, tgt_batch
-
         self.params['src_vocab_size'] = len(self.vocabs['src_lang'])
         self.params['tgt_vocab_size'] = len(self.vocabs['tgt_lang'])
-
-        self.train = Multi30k(split='train')
-        self.val = Multi30k(split='valid')
-        self.test = Multi30k(split='test')
-
-        def temp_collate(batch):
-            src, tgt = batch
-            return src, tgt
-
-        self.test_sent = DataLoader(self.test, batch_size=1, collate_fn=temp_collate)
-
-
-        self.train_iter = DataLoader(
-                            self.train, 
-                            batch_size=self.params['batch_size'], 
-                            collate_fn=collate_fn
-                            )
-
-        self.val_iter = DataLoader(
-                            self.val, 
-                            batch_size=self.params['batch_size'], 
-                            collate_fn=collate_fn
-                            )
-        self.test_iter = DataLoader(
-                            self.test, 
-                            batch_size=self.params['batch_size'], 
-                            collate_fn=collate_fn
-                            )
 
         self.model = IIPL_Transformer(self.params['n_layers'], self.params['n_layers'], self.params['emb_size'],
                                               self.params['nhead'], self.params['src_vocab_size'], self.params['tgt_vocab_size'],
@@ -94,30 +56,70 @@ class Trainer:
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-        self.optimizer = ScheduledOptim(
-            optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=self.params['lr']),
-            warmup_steps=4000,
-            hidden_dim=self.params['ffn_hid_dim']
-        )
+        # self.optimizer = ScheduledOptim(
+        #     optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=self.params['lr']),
+        #     warmup_steps=4000,
+        #     hidden_dim=self.params['ffn_hid_dim']
+        # )
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
 
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 
     def learn(self):
         print("\nbegin training...")
 
+        def collate_fn(batch):
+                src_batch, tgt_batch = [], []
+                for src_sample, tgt_sample in batch:
+                    src_batch.append(self.text_transform['src_lang'](src_sample.rstrip("\n")))
+                    tgt_batch.append(self.text_transform['tgt_lang'](tgt_sample.rstrip("\n")))
+                
+                src_batch = pad_sequence(src_batch, padding_value=PAD_IDX)
+                tgt_batch = pad_sequence(tgt_batch, padding_value=PAD_IDX)
+                return src_batch, tgt_batch
+                
+        def temp_collate(batch):
+            src, tgt = batch[0].rstrip("\n"), batch[1].rstrip("\n")
+            return src, tgt
+
         for epoch in range(self.params['num_epoch']):
             start_time = time.time()
 
-            epoch_loss = train_loop(self.train_iter, self.model, self.optimizer, self.criterion, self.device)
-            val_loss = val_loop(self.val_iter, self.model, self.criterion, self.device)
+            train_set = Multi30k(split='train')
+            val_set = Multi30k(split='valid')
+            test_set = Multi30k(split='test')
+
+
+            train_iter = DataLoader(
+                            train_set, 
+                            batch_size=self.params['batch_size'], 
+                            collate_fn=collate_fn
+                            )
+
+            val_iter = DataLoader(
+                            val_set, 
+                            batch_size=self.params['batch_size'], 
+                            collate_fn=collate_fn
+                            )
+            test_iter = DataLoader(
+                            test_set, 
+                            batch_size=self.params['batch_size'], 
+                            collate_fn=collate_fn
+                            )
+
+
+            epoch_loss = train_loop(train_iter, self.model, self.optimizer, self.criterion, self.device)
+            val_loss = val_loop(val_iter, self.model, self.criterion, self.device)
 
             end_time = time.time()
 
             if (epoch + 1) % 2 == 0:
-                test(self.test_iter, self.model, self.criterion, self.device)
+                test(test_iter, self.model, self.criterion, self.device)
 
             if (epoch + 1) % 2 == 0:
-                get_bleu(self.test_sent, self.model, self.vocabs, self.text_transform, self.device)
+                test_set = Multi30k(split='test')
+                test_sent = DataLoader(test_set, batch_size=1, collate_fn=temp_collate)
+                get_bleu(test_sent, self.model, self.vocabs, self.text_transform, self.device)
 
             minutes, seconds, time_left_min, time_left_sec = epoch_time(end_time-start_time, epoch, self.params['num_epoch'])
         
@@ -125,8 +127,8 @@ class Trainer:
             print("Train_loss: {} - Val_loss: {} - Epoch time: {}m {}s - Time left for training: {}m {}s"\
             .format(round(epoch_loss, 3), round(val_loss, 3), minutes, seconds, time_left_min, time_left_sec))
 
-        torch.save(self.model.state_dict(), 'data/checkpoints/checkpoint.pth')
-        torch.save(self.model, 'data/checkpoints/checkpoint.pt')
+        torch.save(self.model.state_dict(), 'checkpoints/checkpoint.pth')
+        torch.save(self.model, 'checkpoints/checkpoint.pt')
 
 def train_loop(train_iter, model, optimizer, criterion, device):
     epoch_loss = 0
@@ -241,6 +243,7 @@ def get_bleu(sentences, model, vocabs, text_transform, device):
         ref = eng.split()
 
         count += 1
+        print(candidate, ref)
         bleu_scores += bs.sentence_bleu([ref], candidate, smoothing_function=chencherry.method2) 
 
     print('BLEU score -> {}'.format(bleu_scores/len(sentences)))
