@@ -4,6 +4,7 @@ from torch.nn import Module
 
 class Encoder_Decoder(nn.Module):
      def __init__(self, encoder_layer, decoder_layer, N):
+         super(Encoder_Decoder, self).__init__()
          self.encoder_layers = clones(encoder_layer, N)
          self.decoder_layers = clones(decoder_layer, N)
          self.N = N
