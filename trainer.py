@@ -5,9 +5,9 @@ import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 import nltk.translate.bleu_score as bs
+from torch.utils.data import DataLoader
 from model.transformer import IIPL_Transformer
 from util import epoch_time, translate, PAD_IDX, create_mask
-from torch.utils.data import DataLoader
 from temp_data import get_tokens, get_vocabs, get_text_transform, Multi30k, pad_sequence
 
 SEED = 970308
@@ -56,12 +56,11 @@ class Trainer:
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-        # self.optimizer = ScheduledOptim(
-        #     optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=self.params['lr']),
-        #     warmup_steps=4000,
-        #     hidden_dim=self.params['ffn_hid_dim']
-        # )
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=5e-5)
+        self.optimizer = ScheduledOptim(
+            optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=self.params['lr']),
+            warmup_steps=4000,
+            hidden_dim=self.params['ffn_hid_dim']
+        )
 
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 
@@ -77,19 +76,14 @@ class Trainer:
                 src_batch = pad_sequence(src_batch, padding_value=PAD_IDX)
                 tgt_batch = pad_sequence(tgt_batch, padding_value=PAD_IDX)
                 return src_batch, tgt_batch
-                
-        def temp_collate(batch):
-            tup = batch[0]
-
-            return tup[0].rstrip("\n"), tup[1].rstrip("\n")
+            
 
         for epoch in range(self.params['num_epoch']):
             start_time = time.time()
 
-            train_set = Multi30k(split='train')
-            val_set = Multi30k(split='valid')
-            test_set = Multi30k(split='test')
-
+            train_set = Multi30k(split='train', language_pair=('de', 'en'))
+            val_set = Multi30k(split='valid', language_pair=('de', 'en'))
+            test_set = Multi30k(split='test', language_pair=('de', 'en'))
 
             train_iter = DataLoader(
                             train_set, 
@@ -118,9 +112,7 @@ class Trainer:
                 test(test_iter, self.model, self.criterion, self.device)
 
             if (epoch + 1) % 2 == 0:
-                test_set = Multi30k(split='test')
-                test_sent = DataLoader(test_set, batch_size=1, collate_fn=temp_collate)
-                get_bleu(test_sent, self.model, self.vocabs, self.text_transform, self.device)
+                get_bleu(self.model, self.vocabs, self.text_transform, self.device)
 
             minutes, seconds, time_left_min, time_left_sec = epoch_time(end_time-start_time, epoch, self.params['num_epoch'])
         
@@ -141,24 +133,24 @@ def train_loop(train_iter, model, optimizer, criterion, device):
 
         tgt_input = tgt[:-1,:]
 
-        src_mask, tgt_mask, src_key_padding_mask, tgt_key_padding_mask = create_mask(src, tgt_input, device)
+        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input, device)
 
         optimizer.zero_grad()
 
         logits = model(
-                    src=src, 
-                    trg=tgt_input, 
-                    src_mask=src_mask,
-                    tgt_mask=tgt_mask,
-                    src_padding_mask=src_key_padding_mask,
-                    tgt_padding_mask=tgt_key_padding_mask,
-                    memory_key_padding_mask=src_key_padding_mask
-                    )
+                  src=src, 
+                  tgt=tgt_input, 
+                  src_mask=src_mask, 
+                  tgt_mask=tgt_mask,
+                  src_padding_mask=src_padding_mask, 
+                  tgt_padding_mask=tgt_padding_mask, 
+                  memory_key_padding_mask=src_padding_mask
+                  )
 
-        output = logits.contiguous().reshape(-1, logits.shape[-1])
-        target = tgt[1:,:].contiguous().reshape(-1)
-        
-        loss = criterion(output, target)                    
+        optimizer.zero_grad()
+
+        tgt_out = tgt[1:, :]
+        loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
         loss.backward()
         
         optimizer.step()
@@ -169,7 +161,7 @@ def train_loop(train_iter, model, optimizer, criterion, device):
 
 def val_loop(val_iter, model, criterion, device):
     model.eval()
-    val_loss = 0
+    losses = 0
 
     for src, tgt in val_iter:
         src = src.to(device)
@@ -177,25 +169,23 @@ def val_loop(val_iter, model, criterion, device):
 
         tgt_input = tgt[:-1, :]
 
-        src_mask, tgt_mask, src_key_padding_mask, tgt_key_padding_mask = create_mask(src, tgt_input, device)
+        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input)
 
         logits = model(
-                    src=src, 
-                    trg=tgt_input, 
-                    src_mask=src_mask,
-                    tgt_mask=tgt_mask,
-                    src_padding_mask=src_key_padding_mask,
-                    tgt_padding_mask=tgt_key_padding_mask,
-                    memory_key_padding_mask=src_key_padding_mask
-                    )
+          src=src, 
+          tgt=tgt_input, 
+          src_mask=src_mask, 
+          tgt_mask=tgt_mask,
+          src_padding_mask=src_padding_mask, 
+          tgt_padding_mask=tgt_padding_mask, 
+          memory_key_padding_mask=src_padding_mask
+          )
 
-        output = logits.contiguous().reshape(-1, logits.shape[-1])
-        target = tgt[1:,:].contiguous().reshape(-1)
-        
-        loss = criterion(output, target)   
-        val_loss += loss.item()
+        tgt_out = tgt[1:, :]
+        loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
+        losses += loss.item()
 
-    return val_loss / len(val_iter)
+    return losses / len(val_iter)
 
 def test(test_iter, model, criterion, device):
     model.eval()
@@ -228,26 +218,31 @@ def test(test_iter, model, criterion, device):
 
     print("Test Loss: {}".format(round(test_loss, 3)))
 
-def get_bleu(sentences, model, vocabs, text_transform, device):
+def temp_collate(batch):
+  tup = batch[0]
+
+  return tup[0].rstrip("\n"), tup[1].rstrip("\n")
+
+def get_bleu(model, vocabs, text_transform, device):
     bleu_scores = 0
     chencherry = bs.SmoothingFunction()
 
+    test_set = Multi30k(split='test')
+    sentences = DataLoader(test_set, batch_size=1, collate_fn=temp_collate)
+
     count = 0
-    for ko, eng in sentences:
+    for de, eng in sentences:
         candidate = translate(
             model = model,
-            src_sentence = ko,
-            vocabs = vocabs, 
-            text_transform = text_transform, 
-            device = device
-            ).split()
+            src_sentence = de
+            )
+        candidate = candidate.split()
         ref = eng.split()
 
         count += 1
         bleu_scores += bs.sentence_bleu([ref], candidate, smoothing_function=chencherry.method2) 
 
     print('BLEU score -> {}'.format(bleu_scores/len(sentences)))
-
 
 class ScheduledOptim:
     def __init__(self, optimizer, warmup_steps, hidden_dim):
