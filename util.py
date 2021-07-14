@@ -1,6 +1,7 @@
 import copy
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 UNK_IDX, PAD_IDX, BOS_IDX, EOS_IDX = 0, 1, 2, 3
 
@@ -11,7 +12,6 @@ def generate_square_subsequent_mask(sz, device):
     mask = (torch.triu(torch.ones((sz, sz), device=device)) == 1).transpose(0, 1)
     mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
     return mask
-
 
 def create_mask(src, tgt, device):
     src_seq_len = src.shape[0]
@@ -40,15 +40,17 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
     src = src.to(device)
     src_mask = src_mask.to(device)
 
+    # memory = model.encode(src, src_mask, None)
     memory = model.encode(src, src_mask)
     ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(device)
     for i in range(max_len-1):
-        memory = memory.to(device)
-        tgt_mask = (generate_square_subsequent_mask(ys.size(0), device)
+        # memory = memory.to(DEVICE)
+        tgt_mask = (generate_square_subsequent_mask(ys.size(0))
                     .type(torch.bool)).to(device)
+        # out = model.decode(ys, memory, None, None, tgt_mask, None)
         out = model.decode(ys, memory, tgt_mask)
         out = out.transpose(0, 1)
-        prob = model.generator(out[:, -1])
+        prob = model.generator(F.gelu(out[:, -1]))
         _, next_word = torch.max(prob, dim=1)
         next_word = next_word.item()
 
@@ -58,11 +60,13 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
             break
     return ys
 
+
+
 def translate(model, src_sentence, text_transform, vocabs, device):
     model.eval()
     src = text_transform['src_lang'](src_sentence).view(-1, 1)
     num_tokens = src.shape[0]
     src_mask = (torch.zeros(num_tokens, num_tokens)).type(torch.bool)
     tgt_tokens = greedy_decode(
-        model,  src, src_mask, max_len=num_tokens + 5, start_symbol=BOS_IDX, device=device).flatten()
+        model,  src, src_mask, max_len=num_tokens + 5, start_symbol=BOS_IDX).flatten()
     return " ".join(vocabs['tgt_lang'].lookup_tokens(list(tgt_tokens.cpu().numpy()))).replace("<bos>", "").replace("<eos>", "")
