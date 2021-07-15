@@ -1,4 +1,5 @@
 import copy
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import TransformerDecoderLayer, TransformerEncoderLayer
@@ -98,7 +99,7 @@ class IIPL_P_Transformer(nn.Module):
           tgt_key_padding_mask=tgt_key_padding_mask,
           memory_key_padding_mask=memory_key_padding_mask
           )
-      return F.log_softmax(self.generator(outs))
+      return F.log_softmax(self.generator(outs), dim=-1)
 
     def encode_decode(self, src, tgt, src_mask, tgt_mask, src_key_padding_mask, tgt_key_padding_mask, memory_key_padding_mask):
         src_emb = self.positional_encoding(self.src_tok_emb(src))
@@ -155,7 +156,7 @@ def build_model(num_layers,
     )
     
   if load:
-    pass
+    model.load_state_dict(torch.load('./data/checkpoints/checkpoint.pth', map_location=device))
   else:
     for p in model.parameters():
       if p.dim() > 1:

@@ -45,10 +45,10 @@ def get_dataloader():
 
     dataloader_dict = {
         'train': DataLoader(dataset_dict['train'], drop_last=True,
-                            batch_size=batch_size, shuffle=True, pin_memory=True,
+                            batch_size=batch_size, shuffle=True, pin_memory=False,
                             num_workers=num_workers),
         'valid': DataLoader(dataset_dict['valid'], drop_last=False,
-                            batch_size=batch_size, shuffle=False, pin_memory=True,
+                            batch_size=batch_size, shuffle=False, pin_memory=False,
                             num_workers=num_workers)
     }
 

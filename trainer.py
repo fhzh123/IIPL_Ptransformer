@@ -9,7 +9,8 @@ import nltk.translate.bleu_score as bs
 from preprocessing import preprocess
 from dataloader import get_dataloader
 from model.transformer import build_model
-from util import epoch_time, translate, PAD_IDX, create_mask
+from util import epoch_time, PAD_IDX, create_mask
+from test import testing
 
 SEED = 970308
 
@@ -68,20 +69,16 @@ class Trainer:
 
             end_time = time.time()
 
-            # if (epoch + 1) % 5 == 0:
-            #     test_loop(test_iter, self.model, self.criterion, self.device)
-
-            # if (epoch + 1) % 5 == 0:
-            #     get_bleu(test_sent, self.model, self.vocabs, self.text_transform, self.device)
-
             minutes, seconds, time_left_min, time_left_sec = epoch_time(end_time-start_time, epoch, self.params['num_epoch'])
         
             print("Epoch: {} out of {}".format(epoch+1, self.params['num_epoch']))
             print("Train_loss: {} - Val_loss: {} - Epoch time: {}m {}s - Time left for training: {}m {}s"\
             .format(round(epoch_loss, 3), round(val_loss, 3), minutes, seconds, time_left_min, time_left_sec))
 
-        torch.save(self.model.state_dict(), 'checkpoints/checkpoint.pth')
-        torch.save(self.model, 'checkpoints/checkpoint.pt')
+        torch.save(self.model.state_dict(), './data/checkpoints/checkpoint.pth')
+        torch.save(self.model, './data/checkpoints/checkpoint.pt')
+
+        testing()
 
 def train_loop(train_iter, model, optimizer, criterion, device):
     model.train()
@@ -187,21 +184,3 @@ def test_loop(test_iter, model, criterion, device):
     test_loss /= len(test_iter)
 
     print("Test Loss: {}".format(round(test_loss, 3)))
-
-def get_bleu(sentences, model, vocabs, text_transform, device):
-    bleu_scores = 0
-    chencherry = bs.SmoothingFunction()
-
-    count = 0
-    for de, eng in sentences:
-        candidate = translate(
-            model = model,
-            src_sentence = de
-            )
-        candidate = candidate.split()
-        ref = eng.split()
-
-        count += 1
-        bleu_scores += bs.sentence_bleu([ref], candidate, smoothing_function=chencherry.method2) 
-
-    print('BLEU score -> {}'.format(bleu_scores/len(sentences)))
