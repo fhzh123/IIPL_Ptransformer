@@ -11,11 +11,12 @@ class EncoderLayer(nn.Module):
         self.dropout = dropout
 
     def forward(self, src, src_mask, key_padding_mask):
+    def forward(self, src, src_mask, src_key_padding_mask):
         # MultiheadAttention
         x, _ = self.attn(
                         src, src, src, 
                         attn_mask = src_mask, 
-                        key_padding_mask = key_padding_mask
+                        src_key_padding_mask = src_key_padding_mask
                         )
         
         # Sublayer Connection
@@ -35,12 +36,12 @@ class Encoder(nn.Module):
         super(Encoder ,self).__init__()
         self.layers = clones(layer, n_layers)
 
-    def forward(self, src, src_mask, key_padding_mask=None):
+    def forward(self, src, src_mask, src_key_padding_mask=None):
         for layer in self.layers:
             x = layer(
                 src=src, 
                 src_mask=src_mask, 
-                key_padding_mask=key_padding_mask
+                src_key_padding_mask=src_key_padding_mask
                 )
 
         return x

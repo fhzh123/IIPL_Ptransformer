@@ -9,13 +9,23 @@ class Encoder_Decoder(nn.Module):
          self.decoder_layers = clones(decoder_layer, N)
          self.N = N
 
-     def forward(self, src, src_mask, src_padding_mask, tgt, 
-                 memory_mask, memory_key_padding_mask, tgt_mask, tgt_padding_mask):
-         for n in range(self.N):
-             src = self.encoder_layers[n](src, src_mask, src_padding_mask)
-            #  tgt = self.decoder_layers[n](tgt, src, memory_mask, memory_key_padding_mask, tgt_mask, tgt_padding_mask)
-             tgt = self.decoder_layers[n](tgt, src, tgt_mask, memory_mask, tgt_padding_mask, memory_key_padding_mask)
-         return tgt 
+     def forward(self, src, src_mask, src_key_padding_mask, tgt, memory_key_padding_mask, tgt_mask, tgt_key_padding_mask):
+        #  for idx in range(self.N):
+        #      src = self.encoder_layers[n](src, src_mask, src_key_padding_mask)
+        #      tgt = self.decoder_layers[n](tgt, src, tgt_mask, tgt_key_padding_mask, memory_key_padding_mask)
+        #  return tgt 
+
+       src_dict = {}
+
+       for idx, layer in enumerate(self.encoder_layers):
+         src = layer(src, src_mask, src_key_padding_mask)
+         src_dict[idx] = src
+         
+       for idx, layer in enumerate(self.decoder_layers):
+         tgt = layer(tgt, src_dict[idx], tgt_mask, None, tgt_key_padding_mask, memory_key_padding_mask)
+
+       return tgt
+      
 
      def encode(self, src, src_mask):
        src_dict = {}
@@ -29,6 +39,6 @@ class Encoder_Decoder(nn.Module):
      def decode(self, tgt, memory, tgt_mask):
 
        for idx, layer in enumerate(self.decoder_layers):
-         tgt = layer(tgt, memory[idx], tgt_mask, None, None, None)
+         tgt = layer(tgt, memory[idx], tgt_mask, None, None)
 
        return tgt

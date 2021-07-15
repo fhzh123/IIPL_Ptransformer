@@ -3,7 +3,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-UNK_IDX, PAD_IDX, BOS_IDX, EOS_IDX = 0, 1, 2, 3
+PAD_IDX = 0
+UNK_IDX = 3
+BOS_IDX = 1
+EOS_IDX = 2
 
 def clones(module, N):
     return nn.ModuleList([ copy.deepcopy(module) for _ in range(N) ])
@@ -25,6 +28,7 @@ def create_mask(src, tgt, device):
 
     return src_mask, tgt_mask, src_padding_mask, tgt_padding_mask
 
+
 def epoch_time(time, curr_epoch, total_epochs):
     minutes = int(time / 60)
     seconds = int(time % 60)
@@ -44,11 +48,15 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
     memory = model.encode(src, src_mask)
     ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(device)
     for i in range(max_len-1):
-        # memory = memory.to(DEVICE)
+        # for key in memory.keys():
+        #   memory[key].to(DEVICE)
+        print(type(memory))
+        memory.to(device)
         tgt_mask = (generate_square_subsequent_mask(ys.size(0))
                     .type(torch.bool)).to(device)
-        # out = model.decode(ys, memory, None, None, tgt_mask, None)
+        # out = model.decode(ys, memory, None, tgt_mask, None)
         out = model.decode(ys, memory, tgt_mask)
+        # out = model.decode(ys, memory, tgt_mask, None, None)
         out = out.transpose(0, 1)
         prob = model.generator(F.gelu(out[:, -1]))
         _, next_word = torch.max(prob, dim=1)
@@ -61,7 +69,6 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
     return ys
 
 
-
 def translate(model, src_sentence, text_transform, vocabs, device):
     model.eval()
     src = text_transform['src_lang'](src_sentence).view(-1, 1)
@@ -70,3 +77,5 @@ def translate(model, src_sentence, text_transform, vocabs, device):
     tgt_tokens = greedy_decode(
         model,  src, src_mask, max_len=num_tokens + 5, start_symbol=BOS_IDX).flatten()
     return " ".join(vocabs['tgt_lang'].lookup_tokens(list(tgt_tokens.cpu().numpy()))).replace("<bos>", "").replace("<eos>", "")
+
+import torch.nn.functional as F
