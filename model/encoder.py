@@ -10,7 +10,6 @@ class EncoderLayer(nn.Module):
         self.norm = nn.LayerNorm(embed_size, 1e-6)
         self.dropout = dropout
 
-    def forward(self, src, src_mask, key_padding_mask):
     def forward(self, src, src_mask, src_key_padding_mask):
         # MultiheadAttention
         x, _ = self.attn(
