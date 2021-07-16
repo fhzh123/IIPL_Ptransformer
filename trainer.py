@@ -11,6 +11,7 @@ from dataloader import get_dataloader
 from model.transformer import build_model
 from util import epoch_time, PAD_IDX, create_mask
 from bleu import get_bleu
+from tqdm import tqdm
 
 SEED = 970308
 
@@ -89,7 +90,7 @@ def train_loop(train_iter, model, optimizer, criterion, device):
     model.train()
     epoch_loss = 0
 
-    for src, tgt in train_iter:
+    for src, tgt in tqdm(train_iter, desc = 'training...'):
         src = src.to(device)
         tgt = tgt.to(device)
         
@@ -126,7 +127,7 @@ def val_loop(val_iter, model, criterion, device):
     model.eval()
     losses = 0
 
-    for src, tgt in val_iter:
+    for src, tgt in tqdm(val_iter, desc = 'validation...'):
         src = src.to(device)
         tgt = tgt.to(device)
         
@@ -159,7 +160,7 @@ def test_loop(test_iter, model, criterion, device):
     model.eval()
     test_loss = 0
 
-    for src, tgt in test_iter:
+    for src, tgt in tqdm(test_iter, desc = 'test'):
         src = src.to(device)
         tgt = tgt.to(device)
         

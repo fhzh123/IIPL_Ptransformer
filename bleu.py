@@ -6,7 +6,7 @@ import pickle
 import sentencepiece as spm
 import nltk.translate.bleu_score as bs
 from util import BOS_IDX, EOS_IDX, generate_square_subsequent_mask
-
+from tqdm import tqdm
 # Import PyTorch
 import torch
 from torch.nn import functional as F
@@ -65,7 +65,7 @@ def get_bleu():
     count = 0
     chencherry = bs.SmoothingFunction()
 
-    for de, eng in test_dataloader.dataset:
+    for de, eng in tqdm(test_dataloader.dataset,desc='get bleu'):
         ref = "".join([trg_id2word[ix] for ix in eng.cpu().numpy()]).replace("<s>", "").replace("</s>", "").replace("<pad>","").replace("<unk>", "").split('▁')[1:]
       
         num_tokens = de.shape[0]
