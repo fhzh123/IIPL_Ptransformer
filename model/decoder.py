@@ -7,38 +7,59 @@ class DecoderLayer(nn.Module):
         self.size = embed_size
         self.attn = attn
         self.ff= feedforward
-        self.norm = nn.LayerNorm(embed_size, 1e-6)
-        self.dropout = dropout
+        self.norm1 = nn.LayerNorm(embed_size, 1e-6)
+        self.norm2 = nn.LayerNorm(embed_size, 1e-6)
+        self.norm3 = nn.LayerNorm(embed_size, 1e-6)
+        self.dropout = nn.Dropout(dropout)
         
-    def forward(self, tgt, memory, memory_mask, memory_key_padding_mask, tgt_mask, tgt_key_padding_mask):
-        x, _ = self.attn(
+    def forward(self, tgt, memory, tgt_mask, memory_mask, tgt_key_padding_mask, memory_key_padding_mask):
+        # MultiheadAttention
+        attn, _ = self.attn(
                  tgt, tgt, tgt, 
                  attn_mask = tgt_mask,
                  key_padding_mask = tgt_key_padding_mask
                  )
+        
+        # x = [trg_seq_len, batch, embed_size]
 
-        x = self.norm(x + self.dropout(x))
+        # Sublayer Connection
+        x = self.norm1(tgt + self.dropout(attn))
 
-        x, _= self.attn(
-                 tgt, memory, memory,
+        # MultiheadAttention
+        attn, _= self.attn(
+                 x, memory, memory,
                  key_padding_mask = memory_key_padding_mask
             )
+        
+        # x = [src_seq_len, batch, embed_size]
 
-        x = self.norm(x + self.dropout(x))
+        # Sublayer Connection
+        x = self.norm2(x + self.dropout(attn))
 
-        x = self.ff(x)
+        # FeedForward 
+        attn = self.ff(x)
 
-        x = self.norm(x + self.dropout(x))
+        # Sublayer Connection
+        x = self.norm3(x + self.dropout(attn))
 
         return x
 
 class Decoder(nn.Module):
     def __init__(self, layer, N):
         super(Decoder, self).__init__()
+        
+        # Make N layers of encoder layers.
         self.layers = clones(layer, N)
 
-    def forward(self, tgt, memory, memory_mask, memory_key_padding_mask, tgt_mask, tgt_key_padding_mask):
+    def forward(self, tgt, memory, tgt_mask, memory_mask, tgt_key_padding_mask, memory_key_padding_mask):
         for layer in self.layers:
-            x = layer(tgt, memory, memory_mask, memory_key_padding_mask, tgt_mask, tgt_key_padding_mask)
+            x = layer(
+                tgt=tgt, 
+                memory=memory, 
+                tgt_mask=tgt_mask, 
+                memory_mask=memory_mask, 
+                tgt_key_padding_mask=tgt_key_padding_mask, 
+                memory_key_padding_mask=memory_key_padding_mask
+                )
         
         return x
