@@ -62,12 +62,11 @@ def get_bleu():
     spm_trg.Load(f'{"./data/preprocessed"}/m_trg_{8000}.model')
 
     bleu_scores = 0
+    count = 0
+    chencherry = bs.SmoothingFunction()
 
-    candidate_token = []
-    reference_token = []
     for de, eng in test_dataloader.dataset:
         ref = "".join([trg_id2word[ix] for ix in eng.cpu().numpy()]).replace("<s>", "").replace("</s>", "").replace("<pad>","").replace("<unk>", "").split('▁')[1:]
-        reference_token.append(ref)
       
         num_tokens = de.shape[0]
 
@@ -75,11 +74,11 @@ def get_bleu():
 
         tgt_tokens = greedy_decode(
             model,  de, src_mask, max_len=num_tokens + 5, start_symbol=BOS_IDX, device=device).flatten()
-        candidate = "".join([trg_id2word[ix] for ix in tgt_tokens.cpu().numpy()]).replace("<s>", "").replace("</s>", "").replace("unk", "")
+        candidate = "".join([trg_id2word[ix] for ix in tgt_tokens.cpu().numpy()]).replace("<s>", "").replace("</s>", "").replace("unk", "").replace("<>", "")
 
         candidate = candidate.split('▁')[1:]
-          
-        candidate_token.append(candidate)
+        count += 1
 
-    bleu_scores = bs.corpus_bleu(reference_token, candidate_token)
-    print('BLEU score -> {}'.format(bleu_scores))
+        bleu_scores += bs.sentence_bleu(ref, candidate, smoothing_function=chencherry.method2) 
+
+    print('BLEU score -> {}'.format(bleu_scores/1000))

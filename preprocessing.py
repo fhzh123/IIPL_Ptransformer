@@ -10,6 +10,8 @@ from glob import glob
 from tqdm import tqdm
 from collections import Counter
 
+#TODO: 토큰을 spacy로 바꾼다, vocab을 torchtext를 이용하여 만든다, 또한 custom dataset에서 sequential transforms를 사용하여 텐서로 바꾼다. 이를 사용하면 processing된 데이터가 아닌 문장들을 바로 텐서로 바꾸어 프로세싱 할 수 있게된다.
+
 def preprocess(data_path="./data/wmt16", preprocess_path="./data/preprocessed", sentencepiece_model = 'bpe', src_vocab_size = 8000, trg_vocab_size = 8000, pad_id = 0, unk_id = 3, bos_id = 1, eos_id = 2 ):
 
     #===================================#

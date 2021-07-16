@@ -10,7 +10,7 @@ from preprocessing import preprocess
 from dataloader import get_dataloader
 from model.transformer import build_model
 from util import epoch_time, PAD_IDX, create_mask
-from test import testing
+from bleu import get_bleu
 
 SEED = 970308
 
@@ -46,15 +46,17 @@ class Trainer:
         self.model = build_model(
                             self.params['n_layers'], self.params['emb_size'], self.params['nhead'], 
                             self.params['src_vocab_size'], self.params['tgt_vocab_size'], 
-                            self.params['ffn_hid_dim'], self.params['dropout'], True,
+                            self.params['ffn_hid_dim'], self.params['dropout'], False,
                             load, self.device
                             )
 
-        self.optimizer = ScheduledOptim(
-            optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=self.params['lr']),
-            warmup_steps=4000,
-            hidden_dim=self.params['ffn_hid_dim']
-        )
+        # self.optimizer = ScheduledOptim(
+        #     optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=5e-5),
+        #     warmup_steps=4000,
+        #     hidden_dim=self.params['ffn_hid_dim']
+        # )
+        self.optimizer = optim.Adam(self.model.parameters(), lr=5e-5, betas=(0.9, 0.98), eps=5e-5)
+        self.scheduler = optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[30,80], gamma=0.1)
 
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 
@@ -65,6 +67,9 @@ class Trainer:
             start_time = time.time()
 
             epoch_loss = train_loop(self.dataloader['train'], self.model, self.optimizer, self.criterion, self.device)
+
+            self.scheduler.step()
+
             val_loss = val_loop(self.dataloader['valid'], self.model, self.criterion, self.device)
 
             end_time = time.time()
@@ -78,7 +83,7 @@ class Trainer:
         torch.save(self.model.state_dict(), './data/checkpoints/checkpoint.pth')
         torch.save(self.model, './data/checkpoints/checkpoint.pt')
 
-        testing()
+        get_bleu()
 
 def train_loop(train_iter, model, optimizer, criterion, device):
     model.train()
@@ -160,7 +165,6 @@ def test_loop(test_iter, model, criterion, device):
         
         src = src.transpose(0,1) # [length, batch]
         tgt = tgt.transpose(0,1) # [length, batch]
-        
         
         tgt_input = tgt[:-1, :]
         
