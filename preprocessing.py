@@ -27,38 +27,26 @@ def preprocess(data_path="./data/wmt14", preprocess_path="./data/preprocessed"):
 	src_list = []
 	trg_list = []
 
-	src_len_list = []
-	trg_len_list = []
-
 	for de in de_list:
 		with open(os.path.join(data_path, de), 'r') as f:
 			for text in f.readlines():
 				stripped_text = text.rstrip("\n")
 				
-				if src_max_len < len(stripped_text):
-					src_max_len = len(stripped_text)
-
-				src_len_list.append(len(stripped_text))
-
-				src_list.append(stripped_text)
-
-	plt.plot(src_len_list)
-	plt.show()
+				# if src_max_len < len(stripped_text):
+				# 	src_max_len = len(stripped_text)
+				if len(stripped_text) <= 5000:
+					src_list.append(stripped_text)
 
 	for en in en_list:
 		with open(os.path.join(data_path, en), 'r') as f:
 			for text in f.readlines():
 				stripped_text = text.rstrip("\n")
 				
-				if trg_max_len < len(stripped_text):
-					trg_max_len = len(stripped_text)
+				# if trg_max_len < len(stripped_text):
+				# 	trg_max_len = len(stripped_text)
 
-					trg_len_list.append(len(stripped_text))
-
+				if len(stripped_text) <= 5000:
 					trg_list.append(stripped_text)
-
-	plt.plot(trg_len_list)
-	plt.show()
 
 	train, val, test = divide_sentences({'src_lang': src_list, 'trg_lang': trg_list})
 
@@ -142,10 +130,8 @@ def preprocess(data_path="./data/wmt14", preprocess_path="./data/preprocessed"):
 			],
 	)
 
-	max_length = max(src_max_len, trg_max_len)
-
-	de_tokenizer.enable_padding(pad_id=3, pad_token="[PAD]")
-	en_tokenizer.enable_padding(pad_id=3, pad_token="[PAD]")
+	de_tokenizer.enable_padding(pad_id=3, pad_token="[PAD]", length=5000)
+	en_tokenizer.enable_padding(pad_id=3, pad_token="[PAD]", length=5000)
 
 	de_tokenizer.save(f'{preprocess_path}/de_tokenizer.json')
 	en_tokenizer.save(f'{preprocess_path}/en_tokenizer.json')

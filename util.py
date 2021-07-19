@@ -37,8 +37,8 @@ def create_mask(src, trg, device):
     # src_mask = [src_len, src_len]
 
 
-    tgt_mask = generate_square_subsequent_mask(tgt_seq_len,device = device)
-    # tgt_mask = [tgt_len, tgt_len]
+    trg_mask = generate_square_subsequent_mask(trg_seq_len,device = device)
+    # trg_mask = [trg_len, trg_len]
 
     src_padding_mask = (src == PAD_IDX).transpose(0, 1)
     # src_padding_mask == src.shape.transpose(0,1)
