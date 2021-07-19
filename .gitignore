@@ -6,8 +6,5 @@ checkpoints/script_checkpoint.pth
 *.pkl
 *.tar
 .vscode/settings.json
-data/wmt14/commoncrawl.de-en.de
-data/wmt14/commoncrawl.de-en.en
-data/wmt14/europarl-v7.de-en.de
 *.de
 *.en
