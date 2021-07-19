@@ -48,7 +48,7 @@ class Trainer:
         self.model = build_model(
                             self.params['n_layers'], self.params['emb_size'], self.params['nhead'], 
                             self.params['src_vocab_size'], self.params['trg_vocab_size'], 
-                            self.params['ffn_hid_dim'], self.params['dropout'], False,
+                            self.params['ffn_hid_dim'], self.params['dropout'], variation,
                             load, self.device
                             )
 
@@ -88,7 +88,7 @@ def train_loop(train_iter, model, optimizer, criterion, device):
     epoch_loss = 0
 
     for src, trg in tqdm(train_iter, desc = 'training...'):
-        print(f'\n{src.shape}')
+
         src = src.to(device)
         trg = trg.to(device)
         

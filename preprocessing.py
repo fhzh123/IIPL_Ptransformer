@@ -34,7 +34,7 @@ def preprocess(data_path="./data/wmt14", preprocess_path="./data/preprocessed"):
 				
 				# if src_max_len < len(stripped_text):
 				# 	src_max_len = len(stripped_text)
-				if len(stripped_text) <= 5000:
+				if len(stripped_text) <= 300:
 					src_list.append(stripped_text)
 
 	for en in en_list:
@@ -45,7 +45,7 @@ def preprocess(data_path="./data/wmt14", preprocess_path="./data/preprocessed"):
 				# if trg_max_len < len(stripped_text):
 				# 	trg_max_len = len(stripped_text)
 
-				if len(stripped_text) <= 5000:
+				if len(stripped_text) <= 300:
 					trg_list.append(stripped_text)
 
 	train, val, test = divide_sentences({'src_lang': src_list, 'trg_lang': trg_list})
@@ -130,8 +130,8 @@ def preprocess(data_path="./data/wmt14", preprocess_path="./data/preprocessed"):
 			],
 	)
 
-	de_tokenizer.enable_padding(pad_id=3, pad_token="[PAD]", length=5000)
-	en_tokenizer.enable_padding(pad_id=3, pad_token="[PAD]", length=5000)
+	de_tokenizer.enable_padding(pad_id=3, pad_token="[PAD]", length=300)
+	en_tokenizer.enable_padding(pad_id=3, pad_token="[PAD]", length=300)
 
 	de_tokenizer.save(f'{preprocess_path}/de_tokenizer.json')
 	en_tokenizer.save(f'{preprocess_path}/en_tokenizer.json')

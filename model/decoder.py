@@ -53,7 +53,7 @@ class Decoder(nn.Module):
 
     def forward(self, trg, memory, trg_mask, memory_mask, trg_key_padding_mask, memory_key_padding_mask):
         for layer in self.layers:
-            x = layer(
+            trg = layer(
                 trg=trg, 
                 memory=memory, 
                 trg_mask=trg_mask, 
@@ -62,4 +62,4 @@ class Decoder(nn.Module):
                 memory_key_padding_mask=memory_key_padding_mask
                 )
         
-        return x
+        return trg
