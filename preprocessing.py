@@ -1,150 +1,144 @@
 # Import Modules
 import os
-import json
 import time
-import pickle
-import argparse
-import numpy as np
-import sentencepiece as spm
-from glob import glob
-from tqdm import tqdm
-from collections import Counter
+import tarfile
+from tokenizers import Tokenizer
+from util import divide_sentences
+from tokenizers.models import BPE
+from tokenizers.trainers import BpeTrainer
+from tokenizers.pre_tokenizers import Whitespace
+from tokenizers.processors import TemplateProcessing
 
-#TODO: 토큰을 spacy로 바꾼다, vocab을 torchtext를 이용하여 만든다, 또한 custom dataset에서 sequential transforms를 사용하여 텐서로 바꾼다. 이를 사용하면 processing된 데이터가 아닌 문장들을 바로 텐서로 바꾸어 프로세싱 할 수 있게된다.
 
-def preprocess(data_path="./data/wmt16", preprocess_path="./data/preprocessed", sentencepiece_model = 'bpe', src_vocab_size = 8000, trg_vocab_size = 8000, pad_id = 0, unk_id = 3, bos_id = 1, eos_id = 2 ):
+def preprocess(data_path="./data/wmt14", preprocess_path="./data/preprocessed"):
 
     #===================================#
     #============Data Load==============#
     #===================================#
 
-    print('Data Load...')
-    # 1) Train data load
-    with open(os.path.join(data_path, 'train.de'), 'r') as f:
-        train_src_sequences = [x.replace('\n', '') for x in f.readlines()]
-    with open(os.path.join(data_path, 'train.en'), 'r') as f:
-        train_trg_sequences = [x.replace('\n', '') for x in f.readlines()]
+    src_max_len = 0
+    trg_max_len = 0
 
-    # 2) Valid data load
-    with open(os.path.join(data_path, 'val.de'), 'r') as f:
-        valid_src_sequences = [x.replace('\n', '') for x in f.readlines()]
-    with open(os.path.join(data_path, 'val.en'), 'r') as f:
-        valid_trg_sequences = [x.replace('\n', '') for x in f.readlines()]
+    file_list = os.listdir(data_path)
 
-    # 2) Test data load
-    with open(os.path.join(data_path, 'test.de'), 'r') as f:
-        test_src_sequences = [x.replace('\n', '') for x in f.readlines()]
-    with open(os.path.join(data_path, 'test.en'), 'r') as f:
-        test_trg_sequences = [x.replace('\n', '') for x in f.readlines()]
+    de_list = [ de for de in file_list if de[-2:] == "de" ]
+    en_list = [ en for en in file_list if en[-2:] == "en" ]
 
+    src_list = []
+    trg_list = []
 
+    for de in de_list:
+      with open(os.path.join(data_path, de), 'r') as f:
+        for text in f.readlines():
+          stripped_text = text.rstrip("\n")
+
+          if src_max_len < len(stripped_text):
+            src_max_len = len(stripped_text)
+
+          src_list.append(stripped_text)
+
+    for en in en_list:
+      with open(os.path.join(data_path, en), 'r') as f:
+        for text in f.readlines():
+          stripped_text = text.rstrip("\n")
+
+          if trg_max_len < len(stripped_text):
+            trg_max_len = len(stripped_text)
+            
+          trg_list.append(stripped_text)
+
+    train, val, test = divide_sentences({'src_lang':src_list, 'trg_lang':trg_list})
 
     # 3) Path setting
     if not os.path.exists(preprocess_path):
         os.mkdir(preprocess_path)
 
     #===================================#
-    #==========Pre-processing===========#
-    #===================================#
-
-    print('SentencePiece Training')
-    start_time = time.time()
-
-    # 1) Source lanugage
-    # Make text to train vocab
-    with open(f'{preprocess_path}/src.txt', 'w') as f:
-        for text in train_src_sequences:
-            f.write(f'{text}\n')
-
-    spm.SentencePieceProcessor()
-    spm.SentencePieceTrainer.Train(
-        f'--input={preprocess_path}/src.txt --model_prefix={preprocess_path}/m_src_{src_vocab_size} '
-        f'--vocab_size={src_vocab_size} --character_coverage=0.9995 --split_by_whitespace=true '
-        f'--pad_id={pad_id} --unk_id={unk_id} --bos_id={bos_id} --eos_id={eos_id} '
-        f'--model_type={sentencepiece_model} --max_sentence_length=10000000')
-
-    src_vocab = list()
-    with open(f'{preprocess_path}/m_src_{src_vocab_size}.vocab') as f:
-        for line in f:
-            src_vocab.append(line[:-1].split('\t')[0])
-
-    src_word2id = {w: i for i, w in enumerate(src_vocab)}
-    spm_src = spm.SentencePieceProcessor()
-    spm_src.Load(f'{preprocess_path}/m_src_{src_vocab_size}.model')
-
-    train_src_indices = tuple(
-        [bos_id] + spm_src.encode(
-                            text, enable_sampling=True, alpha=0.1, nbest_size=-1, out_type=int) + \
-        [eos_id] for text in train_src_sequences
-    )
-    valid_src_indices = tuple(
-        [bos_id] + spm_src.encode(text, out_type=int) + [eos_id] for text in valid_src_sequences
-    )
-    test_src_indices = tuple(
-        [bos_id] + spm_src.encode(text, out_type=int) + [eos_id] for text in test_src_sequences
-    )
-
-    # 2) Target lanugage
-    # Make text to train vocab
-    with open(f'{preprocess_path}/trg.txt', 'w') as f:
-        for text in train_trg_sequences:
-            f.write(f'{text}\n')
-
-    spm.SentencePieceProcessor()
-    spm.SentencePieceTrainer.Train(
-        f'--input={preprocess_path}/trg.txt --model_prefix={preprocess_path}/m_trg_{trg_vocab_size} '
-        f'--vocab_size={trg_vocab_size} --character_coverage=0.9995 --split_by_whitespace=true '
-        f'--pad_id={pad_id} --unk_id={unk_id} --bos_id={bos_id} --eos_id={eos_id} '
-        f'--model_type={sentencepiece_model} --max_sentence_length=10000000')
-
-    trg_vocab = list()
-    with open(f'{preprocess_path}/m_trg_{trg_vocab_size}.vocab') as f:
-        for line in f:
-            trg_vocab.append(line[:-1].split('\t')[0])
-
-    trg_word2id = {w: i for i, w in enumerate(trg_vocab)}
-
-    spm_trg = spm.SentencePieceProcessor()
-    spm_trg.Load(f'{preprocess_path}/m_trg_{trg_vocab_size}.model')
-
-    train_trg_indices = tuple(
-        [bos_id] + spm_trg.encode(
-                            text, enable_sampling=True, alpha=0.1, nbest_size=-1, out_type=int) + \
-        [eos_id] for text in train_trg_sequences
-    )
-    valid_trg_indices = tuple(
-        [bos_id] + spm_trg.encode(text, out_type=int) + [eos_id] for text in valid_trg_sequences
-    )
-    test_trg_indices = tuple(
-        [bos_id] + spm_trg.encode(text, out_type=int) + [eos_id] for text in test_trg_sequences
-    )
-
-    print(f'Done! ; {round((time.time()-start_time)/60, 3)}min spend')
-
-    #===================================#
     #==============Saving===============#
     #===================================#
 
-    print('Parsed sentence save setting...')
+    # Save train sentences
+    with open(f'{preprocess_path}/src_train.txt', 'w') as f:
+        for text in train['src_lang']:
+            f.write(f'{text}\n')
+    
+    with open(f'{preprocess_path}/trg_train.txt', 'w') as f:
+        for text in train['trg_lang']:
+            f.write(f'{text}\n')
+
+    # Save valid sentences
+    with open(f'{preprocess_path}/src_val.txt', 'w') as f:
+        for text in val['src_lang']:
+            f.write(f'{text}\n')
+
+    with open(f'{preprocess_path}/trg_val.txt', 'w') as f:
+        for text in val['trg_lang']:
+            f.write(f'{text}\n')
+    
+    # Save test sentences
+    with open(f'{preprocess_path}/src_test.txt', 'w') as f:
+        for text in test['src_lang']:
+            f.write(f'{text}\n')
+
+    with open(f'{preprocess_path}/trg_test.txt', 'w') as f:
+        for text in test['trg_lang']:
+            f.write(f'{text}\n')
+
+    
+    #===================================#
+    #==========DE->EN Tokenizer=========#
+    #===================================#        
+
+    # 1) BPE Tokenizer
+        #  - For DE->EN translation, shared tokenizer was used,
+
+    print('BPE Training')
     start_time = time.time()
 
-    with open(os.path.join(preprocess_path, 'processed.pkl'), 'wb') as f:
-        pickle.dump({
-            'train_src_indices': train_src_indices,
-            'valid_src_indices': valid_src_indices,
-            'train_trg_indices': train_trg_indices,
-            'valid_trg_indices': valid_trg_indices,
-            'src_word2id': src_word2id,
-            'trg_word2id': trg_word2id
-        }, f)
+    de_tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
+    en_tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
 
-    with open(os.path.join(preprocess_path, 'test_processed.pkl'), 'wb') as f:
-        pickle.dump({
-            'test_src_indices': test_src_indices,
-            'test_trg_indices': test_trg_indices,
-            'src_word2id': src_word2id,
-            'trg_word2id': trg_word2id
-        }, f)
+    de_trainer = BpeTrainer(
+                    special_tokens=["[UNK]", "[BOS]", "[EOS]", "[PAD]", "[MASK]"],
+                    vocab_size=37000, min_frequency=5
+                    )
+    en_trainer = BpeTrainer(
+                    special_tokens=["[UNK]", "[BOS]", "[EOS]", "[PAD]", "[MASK]"],
+                    vocab_size=37000, min_frequency=5
+                    )
+    
+    de_tokenizer.pre_tokenizer = Whitespace()
+    en_tokenizer.pre_tokenizer = Whitespace()
+
+    de_tokenizer.train_from_iterator(src_list, de_trainer)
+    en_tokenizer.train_from_iterator(trg_list, en_trainer)
+
+    de_tokenizer.post_processor = TemplateProcessing(
+        single="[BOS] $A [EOS]",
+        pair="[BOS] $A [EOS] $B:1 [EOS]:1",
+        special_tokens=[
+            ("[BOS]", de_tokenizer.token_to_id("[BOS]")),
+            ("[EOS]", de_tokenizer.token_to_id("[EOS]")),
+        ],
+    )
+    en_tokenizer.post_processor = TemplateProcessing(
+        single="[BOS] $A [EOS]",
+        pair="[BOS] $A [EOS] $B:1 [EOS]:1",
+        special_tokens=[
+            ("[BOS]", en_tokenizer.token_to_id("[BOS]")),
+            ("[EOS]", en_tokenizer.token_to_id("[EOS]")),
+        ],
+    )
+
+    max_length = max(src_max_len, trg_max_len)
+
+    de_tokenizer.enable_padding(pad_id=3, pad_token="[PAD]")
+    en_tokenizer.enable_padding(pad_id=3, pad_token="[PAD]")
+
+
+    de_tokenizer.save(f'{preprocess_path}/de_tokenizer.json')
+    en_tokenizer.save(f'{preprocess_path}/en_tokenizer.json')
+
+    print("EXAMPLE:\n DE: {}\n EN: {}\n".format(de_tokenizer.encode(src_list[0]).tokens, en_tokenizer.encode(trg_list[0]).tokens))
 
     print(f'Done! ; {round((time.time()-start_time)/60, 3)}min spend')
-

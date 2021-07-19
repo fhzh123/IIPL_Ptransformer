@@ -1,27 +1,23 @@
+import torch
 from util import PAD_IDX
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data.dataset import Dataset
 
 class CustomDataset(Dataset):
-    def __init__(self, src_list, trg_list, min_len=4, src_max_len=300, trg_max_len=300):
-        self.tensor_list = []
-        for src, trg in zip(src_list, trg_list):
-            # if min_len <= len(src) <= src_max_len and min_len <= len(trg) <= trg_max_len:
-            #     src_tensor = torch.zeros(src_max_len, dtype=torch.long)
-            #     src_tensor[:len(src)] = torch.tensor(src, dtype=torch.long)
-            #     trg_tensor = torch.zeros(trg_max_len, dtype=torch.long)
-            #     trg_tensor[:len(trg)] = torch.tensor(trg, dtype=torch.long)
-            #     self.tensor_list.append((src_tensor, trg_tensor))
-            src_tensor = pad_sequence(src, padding_value=PAD_IDX)
-            trg_tensor = pad_sequence(trg, padding_value=PAD_IDX)
-            self.tensor_list.append((src_tensor, trg_tensor))
+    def __init__(self, src_list, trg_list, src_tokenizer, trg_tokenizer):
+        self.encoded_src = src_tokenizer.encode_batch(src_list)
+        self.encoded_trg = trg_tokenizer.encode_batch(trg_list)
 
-
-        self.tensor_list = tuple(self.tensor_list)
-        self.num_data = len(self.tensor_list)
+        self.num_data = len(self.src_list)
 
     def __getitem__(self, index):
-        return self.tensor_list[index]
+        src = self.encoded_src[index]
+        trg = self.encoded_trg[index]
+
+        src_tensor = torch.tensor(src.ids)
+        trg_tensor = torch.tensor(trg.ids)
+
+        return tuple((src_tensor, trg_tensor))
 
     def __len__(self):
         return self.num_data

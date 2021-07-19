@@ -4,13 +4,13 @@ import random
 import numpy as np
 import torch.nn as nn
 from torch import optim
+# from bleu import get_bleu
 from my_optim import ScheduledOptim
-import nltk.translate.bleu_score as bs
 from preprocessing import preprocess
 from dataloader import get_dataloader
 from model.transformer import build_model
-from util import epoch_time, PAD_IDX, create_mask
-from bleu import get_bleu
+from util import epoch_time, PAD_IDX, create_mask, get_vocab_size
+
 
 SEED = 970308
 
@@ -39,24 +39,24 @@ class Trainer:
 
         preprocess()
 
-        self.dataloader, self.params['src_vocab_size'], self.params['tgt_vocab_size'] = get_dataloader()
+        self.params['src_vocab_size'], self.params['trg_vocab_size'] = get_vocab_size()
+
+        self.dataloader = get_dataloader(self.params['batch_size'])
         
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.model = build_model(
                             self.params['n_layers'], self.params['emb_size'], self.params['nhead'], 
-                            self.params['src_vocab_size'], self.params['tgt_vocab_size'], 
+                            self.params['src_vocab_size'], self.params['trg_vocab_size'], 
                             self.params['ffn_hid_dim'], self.params['dropout'], False,
                             load, self.device
                             )
 
-        # self.optimizer = ScheduledOptim(
-        #     optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=5e-5),
-        #     warmup_steps=4000,
-        #     hidden_dim=self.params['ffn_hid_dim']
-        # )
-        self.optimizer = optim.Adam(self.model.parameters(), lr=5e-5, betas=(0.9, 0.98), eps=5e-5)
-        self.scheduler = optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[30,80], gamma=0.1)
+        self.optimizer = ScheduledOptim(
+            optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=5e-5),
+            warmup_steps=4000,
+            hidden_dim=self.params['ffn_hid_dim']
+        )
 
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 
@@ -67,8 +67,6 @@ class Trainer:
             start_time = time.time()
 
             epoch_loss = train_loop(self.dataloader['train'], self.model, self.optimizer, self.criterion, self.device)
-
-            self.scheduler.step()
 
             val_loss = val_loop(self.dataloader['valid'], self.model, self.criterion, self.device)
 
@@ -83,36 +81,36 @@ class Trainer:
         torch.save(self.model.state_dict(), './data/checkpoints/checkpoint.pth')
         torch.save(self.model, './data/checkpoints/checkpoint.pt')
 
-        get_bleu()
+        # get_bleu()
 
 def train_loop(train_iter, model, optimizer, criterion, device):
     model.train()
     epoch_loss = 0
 
-    for src, tgt in train_iter:
+    for src, trg in train_iter:
         src = src.to(device)
-        tgt = tgt.to(device)
+        trg = trg.to(device)
         
         src = src.transpose(0,1) # [length, batch]
-        tgt = tgt.transpose(0,1) # [length, batch]
+        trg = trg.transpose(0,1) # [length, batch]
         
-        tgt_input = tgt[:-1, :]
+        trg_input = trg[:-1, :]
 
-        src_mask, tgt_mask, src_key_padding_mask, tgt_key_padding_mask = create_mask(src, tgt_input, device)
+        src_mask, trg_mask, src_key_padding_mask, trg_key_padding_mask = create_mask(src, trg_input, device)
 
         logits = model(
                   src=src, 
-                  tgt=tgt_input, 
+                  trg=trg_input, 
                   src_mask=src_mask, 
-                  tgt_mask=tgt_mask,
+                  trg_mask=trg_mask,
                   src_key_padding_mask=src_key_padding_mask, 
-                  tgt_key_padding_mask=tgt_key_padding_mask, 
+                  trg_key_padding_mask=trg_key_padding_mask, 
                   memory_key_padding_mask=src_key_padding_mask
                   )
 
         optimizer.zero_grad()
-        tgt_out = tgt[1:, :]
-        loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
+        trg_out = trg[1:, :]
+        loss = criterion(logits.reshape(-1, logits.shape[-1]), trg_out.reshape(-1))
         loss.backward()
         
         
@@ -126,31 +124,31 @@ def val_loop(val_iter, model, criterion, device):
     model.eval()
     losses = 0
 
-    for src, tgt in val_iter:
+    for src, trg in val_iter:
         src = src.to(device)
-        tgt = tgt.to(device)
+        trg = trg.to(device)
         
         src = src.transpose(0,1) # [length, batch]
-        tgt = tgt.transpose(0,1) # [length, batch]
+        trg = trg.transpose(0,1) # [length, batch]
         
         
-        tgt_input = tgt[:-1, :]
+        trg_input = trg[:-1, :]
         
 
-        src_mask, tgt_mask, src_key_padding_mask, tgt_key_padding_mask = create_mask(src, tgt_input, device)
+        src_mask, trg_mask, src_key_padding_mask, trg_key_padding_mask = create_mask(src, trg_input, device)
 
         logits = model(
                   src=src, 
-                  tgt=tgt_input, 
+                  trg=trg_input, 
                   src_mask=src_mask, 
-                  tgt_mask=tgt_mask,
+                  trg_mask=trg_mask,
                   src_key_padding_mask=src_key_padding_mask, 
-                  tgt_key_padding_mask=tgt_key_padding_mask, 
+                  trg_key_padding_mask=trg_key_padding_mask, 
                   memory_key_padding_mask=src_key_padding_mask
                   )
 
-        tgt_out = tgt[1:, :]
-        loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
+        trg_out = trg[1:, :]
+        loss = criterion(logits.reshape(-1, logits.shape[-1]), trg_out.reshape(-1))
         losses += loss.item()
 
     return losses / len(val_iter)
@@ -159,31 +157,31 @@ def test_loop(test_iter, model, criterion, device):
     model.eval()
     test_loss = 0
 
-    for src, tgt in test_iter:
+    for src, trg in test_iter:
         src = src.to(device)
-        tgt = tgt.to(device)
+        trg = trg.to(device)
         
         src = src.transpose(0,1) # [length, batch]
-        tgt = tgt.transpose(0,1) # [length, batch]
+        trg = trg.transpose(0,1) # [length, batch]
         
-        tgt_input = tgt[:-1, :]
+        trg_input = trg[:-1, :]
         
 
-        src_mask, tgt_mask, src_key_padding_mask, tgt_key_padding_mask = create_mask(src, tgt_input, device)
+        src_mask, trg_mask, src_key_padding_mask, trg_key_padding_mask = create_mask(src, trg_input, device)
 
         logits = model(
                   src=src, 
-                  tgt=tgt_input, 
+                  trg=trg_input, 
                   src_mask=src_mask, 
-                  tgt_mask=tgt_mask,
+                  trg_mask=trg_mask,
                   src_key_padding_mask=src_key_padding_mask, 
-                  tgt_key_padding_mask=tgt_key_padding_mask, 
+                  trg_key_padding_mask=trg_key_padding_mask, 
                   memory_key_padding_mask=src_key_padding_mask
                   )
 
-        tgt_out = tgt[1:, :]
+        trg_out = trg[1:, :]
         
-        loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))  
+        loss = criterion(logits.reshape(-1, logits.shape[-1]), trg_out.reshape(-1))  
         test_loss += loss.item()
     test_loss /= len(test_iter)
 

@@ -4,3 +4,4 @@ checkpoints/script_checkpoint.pth
 *.pyc
 *.pickle
 *.pkl
+*.tar
