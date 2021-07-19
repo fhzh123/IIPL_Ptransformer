@@ -9,7 +9,6 @@ from tokenizers.trainers import BpeTrainer
 from tokenizers.pre_tokenizers import Whitespace
 from tokenizers.processors import TemplateProcessing
 
-
 def preprocess(data_path="./data/wmt14", preprocess_path="./data/preprocessed"):
 
     #===================================#
