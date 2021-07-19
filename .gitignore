@@ -5,3 +5,10 @@ checkpoints/script_checkpoint.pth
 *.pickle
 *.pkl
 *.tar
+.vscode/settings.json
+data/wmt14/commoncrawl.de-en.de
+data/wmt14/commoncrawl.de-en.en
+data/wmt14/europarl-v7.de-en.de
+data/wmt14/europarl-v7.de-en.en
+data/wmt14/news-commentary-v9.de-en.de
+data/wmt14/news-commentary-v9.de-en.en
