@@ -15,19 +15,19 @@ class MultiHeadAttention(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, query, key, value, attn_mask=None, key_padding_mask=None):
-        # query = [ tgt_len, batch, emb ]
+        # query = [ trg_len, batch, emb ]
         # key, value = [ src_len, batch, emb ]
-        tgt_len, batch, embed_dim = query.shape
+        trg_len, batch, embed_dim = query.shape
 
         query = self.w_q(query)
         key = self.w_k(key)
         value = self.w_v(value)
 
-        query = query.contiguous().view(tgt_len, batch * self.h, self.d_k).transpose(0,1)
+        query = query.contiguous().view(trg_len, batch * self.h, self.d_k).transpose(0,1)
         value = value.contiguous().view(-1, batch * self.h, self.d_k).transpose(0,1)
         key = key.contiguous().view(-1, batch * self.h, self.d_k).transpose(0,1)
 
-        # query = [ batch * nhead, tgt_len, d_k ] , now batch first
+        # query = [ batch * nhead, trg_len, d_k ] , now batch first
         # key, value = [ batch * nhead, src_len, d_k ]
 
         src_len = key.size(1)
@@ -44,18 +44,18 @@ class MultiHeadAttention(nn.Module):
                 attn_mask = new_attn_mask
 
         attn = scaled_dot_product_attention(query, key, value, attn_mask, self.dropout)
-        attn = attn.transpose(0, 1).contiguous().view(tgt_len, batch, embed_dim)
+        attn = attn.transpose(0, 1).contiguous().view(trg_len, batch, embed_dim)
         attn = self.w_o(attn)
 
         return attn, None
 
 def scaled_dot_product_attention(query, key, value, mask=None, dropout=None):
-    # query = [ batch * head, tgt_len, d_k ]
+    # query = [ batch * head, trg_len, d_k ]
     # key, value = [ batch * nhead, src_len, d_k ]
 
     scores = torch.bmm(query, key.transpose(-2, -1))
 
-    # scores = [ batch * nhead, tgt_len, src_len ]
+    # scores = [ batch * nhead, trg_len, src_len ]
 
     scores /= math.sqrt(query.size(2))
 
@@ -66,6 +66,6 @@ def scaled_dot_product_attention(query, key, value, mask=None, dropout=None):
 
     attn = torch.bmm(scores, value)
 
-    # attn = [ batch * nhead, tgt_len, d_k ]
+    # attn = [ batch * nhead, trg_len, d_k ]
 
     return attn

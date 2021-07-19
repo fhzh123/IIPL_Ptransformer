@@ -9,11 +9,11 @@ class Encoder_Decoder(nn.Module):
         self.decoder_layers = clones(decoder_layer, N)
         self.N = N
 
-    def forward(self, src, src_mask, src_key_padding_mask, tgt, memory_key_padding_mask, tgt_mask, tgt_key_padding_mask):
+    def forward(self, src, src_mask, src_key_padding_mask, trg, memory_key_padding_mask, trg_mask, trg_key_padding_mask):
       #  for idx in range(self.N):
       #      src = self.encoder_layers[n](src, src_mask, src_key_padding_mask)
-      #      tgt = self.decoder_layers[n](tgt, src, tgt_mask, tgt_key_padding_mask, memory_key_padding_mask)
-      #  return tgt 
+      #      trg = self.decoder_layers[n](trg, src, trg_mask, trg_key_padding_mask, memory_key_padding_mask)
+      #  return trg 
 
       #TODO: 원래는 하나씩 인코더에서 디코더로 넘겨주는건데 6개면 2개씩?(예시.) concat해서 넘겨주어서 진행하는 방식으로, 기준을 어떻게 잡는건지 궁금한데.
       # 참고논문: Transformer XL
@@ -28,9 +28,9 @@ class Encoder_Decoder(nn.Module):
         src_dict[idx] = src
          
       for idx, layer in enumerate(self.decoder_layers):
-        tgt = layer(tgt, src_dict[idx], tgt_mask, None, tgt_key_padding_mask, memory_key_padding_mask)
+        trg = layer(trg, src_dict[idx], trg_mask, None, trg_key_padding_mask, memory_key_padding_mask)
 
-      return tgt
+      return trg
       
 
     def encode(self, src, src_mask):
@@ -42,9 +42,9 @@ class Encoder_Decoder(nn.Module):
 
       return src_dict
 
-    def decode(self, tgt, memory, tgt_mask):
+    def decode(self, trg, memory, trg_mask):
 
       for idx, layer in enumerate(self.decoder_layers):
-        tgt = layer(tgt, memory[idx], tgt_mask, None, None)
+        trg = layer(trg, memory[idx], trg_mask, None, None)
 
-      return tgt
+      return trg

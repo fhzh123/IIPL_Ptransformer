@@ -14,7 +14,6 @@ from torch.utils.data import DataLoader
 from dataset import CustomDataset
 
 
-
 def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
     src = src.to(device)
     src_mask = src_mask.to(device)
@@ -23,19 +22,21 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
     ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(device)
     for i in range(max_len-1):
         for key in memory.keys():
-          memory[key].to(device)
-        tgt_mask = (generate_square_subsequent_mask(ys.size(0), device)
+            memory[key].to(device)
+        trg_mask = (generate_square_subsequent_mask(ys.size(0), device)
                     .type(torch.bool)).to(device)
-        out = model.decode(ys, memory, tgt_mask)
+        out = model.decode(ys, memory, trg_mask)
         out = out.transpose(0, 1)
         prob = model.generator(F.gelu(out[:, -1]))
         _, next_word = torch.max(prob, dim=1)
         next_word = next_word.item()
 
-        ys = torch.cat([ys,torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=0)
+        ys = torch.cat([ys, torch.ones(1, 1).type_as(
+            src.data).fill_(next_word)], dim=0)
         if next_word == EOS_IDX:
             break
     return ys
+
 
 def get_bleu():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -65,20 +66,24 @@ def get_bleu():
     count = 0
     chencherry = bs.SmoothingFunction()
 
-    for de, eng in tqdm(test_dataloader.dataset,desc='get bleu'):
-        ref = "".join([trg_id2word[ix] for ix in eng.cpu().numpy()]).replace("<s>", "").replace("</s>", "").replace("<pad>","").replace("<unk>", "").split('▁')[1:]
-      
+    for de, eng in test_dataloader.dataset:
+        ref = "".join([trg_id2word[ix] for ix in eng.cpu().numpy()]).replace("<s>", "").replace(
+            "</s>", "").replace("<pad>", "").replace("<unk>", "").split('▁')[1:]
+
         num_tokens = de.shape[0]
 
-        src_mask = (torch.zeros(num_tokens, num_tokens)).type(torch.bool).to(device)
+        src_mask = (torch.zeros(num_tokens, num_tokens)
+                    ).type(torch.bool).to(device)
 
-        tgt_tokens = greedy_decode(
+        trg_tokens = greedy_decode(
             model,  de, src_mask, max_len=num_tokens + 5, start_symbol=BOS_IDX, device=device).flatten()
-        candidate = "".join([trg_id2word[ix] for ix in tgt_tokens.cpu().numpy()]).replace("<s>", "").replace("</s>", "").replace("unk", "").replace("<>", "")
+        candidate = "".join([trg_id2word[ix] for ix in trg_tokens.cpu().numpy()]).replace(
+            "<s>", "").replace("</s>", "").replace("unk", "").replace("<>", "")
 
         candidate = candidate.split('▁')[1:]
         count += 1
 
-        bleu_scores += bs.sentence_bleu(ref, candidate, smoothing_function=chencherry.method2) 
+        bleu_scores += bs.sentence_bleu(ref, candidate,
+                                        smoothing_function=chencherry.method2)
 
     print('BLEU score -> {}'.format(bleu_scores/1000))
