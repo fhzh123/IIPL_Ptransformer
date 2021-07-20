@@ -1,23 +1,24 @@
 import torch
-from util import PAD_IDX
-from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data.dataset import Dataset
 
 class CustomDataset(Dataset):
-    def __init__(self, src_list, trg_list, src_tokenizer, trg_tokenizer):
-        self.encoded_src = src_tokenizer.encode_batch(src_list)
-        self.encoded_trg = trg_tokenizer.encode_batch(trg_list)
+	def __init__(self, src_list, trg_list, de_tokenizer, en_tokenizer):
+		self.src_list = src_list
+		self.trg_list = trg_list
 
-        self.num_data = len(self.src_list)
+		self.de_tokenizer = de_tokenizer
+		self.en_tokenizer = en_tokenizer
 
-    def __getitem__(self, index):
-        src = self.encoded_src[index]
-        trg = self.encoded_trg[index]
+		self.num_data = len(self.src_list)
 
-        src_tensor = torch.tensor(src.ids)
-        trg_tensor = torch.tensor(trg.ids)
+	def __getitem__(self, index):
+		src = self.src_list[index]
+		trg = self.trg_list[index]
 
-        return tuple((src_tensor, trg_tensor))
-
-    def __len__(self):
-        return self.num_data
+		src_tensor = torch.tensor(self.de_tokenizer.encode(src).ids)
+		trg_tensor = torch.tensor(self.en_tokenizer.encode(trg).ids)
+		
+		return tuple((src_tensor, trg_tensor))
+		
+	def __len__(self):
+		return self.num_data

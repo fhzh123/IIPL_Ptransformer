@@ -1,13 +1,14 @@
 # Import modules
 import os
 import gc
+import torch
 from tokenizers import Tokenizer
 # Import PyTorch
 from dataset import CustomDataset
 from torch.utils.data import DataLoader
 
 def get_dataloader(batch_size, num_workers=4):
-
+    
     src_train, trg_train = [], []
     src_val, trg_val = [], []
 
@@ -42,7 +43,7 @@ def get_dataloader(batch_size, num_workers=4):
     gc.enable()
 
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
+    
     # 2) Dataloader setting
     dataset_dict = {
         'train': CustomDataset(src_train, trg_train, de_tokenizer, en_tokenizer),
@@ -59,4 +60,3 @@ def get_dataloader(batch_size, num_workers=4):
     }
 
     return dataloader_dict
-

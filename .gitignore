@@ -5,3 +5,6 @@ checkpoints/script_checkpoint.pth
 *.pickle
 *.pkl
 *.tar
+.vscode/settings.json
+*.de
+*.en

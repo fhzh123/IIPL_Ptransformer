@@ -2,9 +2,10 @@ import time
 import torch
 import random
 import numpy as np
+from tqdm import tqdm
 import torch.nn as nn
 from torch import optim
-# from bleu import get_bleu
+from bleu import get_bleu
 from my_optim import ScheduledOptim
 from preprocessing import preprocess
 from dataloader import get_dataloader
@@ -47,7 +48,7 @@ class Trainer:
         self.model = build_model(
                             self.params['n_layers'], self.params['emb_size'], self.params['nhead'], 
                             self.params['src_vocab_size'], self.params['trg_vocab_size'], 
-                            self.params['ffn_hid_dim'], self.params['dropout'], False,
+                            self.params['ffn_hid_dim'], self.params['dropout'], variation,
                             load, self.device
                             )
 
@@ -80,14 +81,14 @@ class Trainer:
         torch.save(self.model.state_dict(), './data/checkpoints/checkpoint.pth')
         torch.save(self.model, './data/checkpoints/checkpoint.pt')
 
-        # get_bleu()
+        get_bleu()
 
 def train_loop(train_iter, model, optimizer, criterion, device):
     model.train()
     epoch_loss = 0
 
-    for src, tgt in tqdm(train_iter, desc = 'training...'):
-      
+    for src, trg in tqdm(train_iter, desc = 'training...'):
+
         src = src.to(device)
         trg = trg.to(device)
         
@@ -124,7 +125,7 @@ def val_loop(val_iter, model, criterion, device):
     model.eval()
     losses = 0
 
-    for src, tgt in tqdm(val_iter, desc = 'validation...'):
+    for src, trg in tqdm(val_iter, desc = 'validation...'):
         src = src.to(device)
         trg = trg.to(device)
         
@@ -157,7 +158,7 @@ def test_loop(test_iter, model, criterion, device):
     model.eval()
     test_loss = 0
 
-    for src, tgt in tqdm(test_iter, desc = 'test'):
+    for src, trg in tqdm(test_iter, desc = 'test'):
         src = src.to(device)
         trg = trg.to(device)
         

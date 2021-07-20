@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, emb_size, dropout, maxlen = 5000):
+    def __init__(self, emb_size, dropout, maxlen = 300):
         super(PositionalEncoding, self).__init__()
         den = torch.exp(- torch.arange(0, emb_size, 2)* math.log(10000) / emb_size)
         pos = torch.arange(0, maxlen).reshape(maxlen, 1)
@@ -26,9 +26,4 @@ class PositionWiseFeedForward(nn.Module):
         self.w_2 = nn.Linear(ffn_hid_dim, emb_size)
 
     def forward(self, x):
-
-        x = F.gelu(self.w_1(x))
-
-        x = self.w_2(x)
-
         return self.w_2(F.gelu(self.w_1(x)))
