@@ -27,7 +27,6 @@ class EncoderLayer(nn.Module):
         
         # Sublayer Connection
         x = self.norm1(src + self.dropout(attn))
-        
 
         # FeedForward 
         attn = self.ff(x)
