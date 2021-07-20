@@ -34,7 +34,7 @@ class IIPL_Transformer(nn.Module):
       )
     self.decoder = Decoder(
       TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_decoder_layers
-      # DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout), num_decoder_layers
+      # DecoderLㄴayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout), num_decoder_layers
       )
 
   def forward(self,
