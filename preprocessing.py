@@ -10,14 +10,11 @@ from tokenizers.pre_tokenizers import Whitespace
 from tokenizers.processors import TemplateProcessing
 
 
-def preprocess(data_path="./data/wmt14", preprocess_path="./data/preprocessed"):
+def preprocess(data_path="./data/wmt16", preprocess_path="./data/preprocessed"):
 
 	#===================================#
 	#============Data Load==============#
 	#===================================#
-
-	src_max_len = 0
-	trg_max_len = 0
 
 	file_list = os.listdir(data_path)
 

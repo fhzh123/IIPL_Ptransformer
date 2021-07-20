@@ -7,10 +7,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tokenizers import Tokenizer
 
-PAD_IDX = 3
 UNK_IDX = 0
 BOS_IDX = 1
 EOS_IDX = 2
+PAD_IDX = 3
 
 def generate_square_subsequent_mask(trg_seq_len, device):
     mask = (torch.triu(torch.ones(trg_seq_len, trg_seq_len, device=device)) == 1).transpose(0, 1)

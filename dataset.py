@@ -1,6 +1,4 @@
 import torch
-from util import PAD_IDX
-from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data.dataset import Dataset
 
 class CustomDataset(Dataset):

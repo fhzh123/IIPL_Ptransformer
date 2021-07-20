@@ -26,9 +26,4 @@ class PositionWiseFeedForward(nn.Module):
         self.w_2 = nn.Linear(ffn_hid_dim, emb_size)
 
     def forward(self, x):
-
-        x = F.gelu(self.w_1(x))
-
-        x = self.w_2(x)
-
         return self.w_2(F.gelu(self.w_1(x)))
