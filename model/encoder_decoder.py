@@ -124,7 +124,7 @@ class Encoder_Decoder_mk2(Module):
 
     outputs = []
 
-    for idx, stack in enumerate(self.encoder_layer_stacks):
+    for stack in self.encoder_layer_stacks:
       for layer in stack:
         src = layer(src, src_mask, src_key_padding_mask)
         outputs.append(src)
@@ -143,7 +143,7 @@ class Encoder_Decoder_mk2(Module):
 
     outputs = []
 
-    for idx, stack in enumerate(self.encoder_layer_stacks):
+    for stack in self.encoder_layer_stacks:
       for layer in stack:
         src = layer(src, src_mask)
         outputs.append(src)
@@ -160,19 +160,22 @@ class Encoder_Decoder_mk2(Module):
     return trg
 
 
-class Encoder_Decoder_mk2(Module):
+class Encoder_Decoder_mk3(Module):
   """
   This class is the paralell transformer that sends information
   from a group of encoders to a group of decoders without any linear transformation.
 
-  encoder1 -> decoder1
-  encoder2 -> decoder2
+  encoder1                      decoder1
+           concat-feedforward->
+  encoder2                      decoder2
 
-  encoder3 -> decoder3
-  encoder4 -> decoder4
+  encoder3                      decoder3
+           concat-feedforward->
+  encoder4                      decoder4
 
-  encoder5 -> decoder5
-  encoder6 -> decoder6
+  encoder5                      decoder5
+           concat-feedforward->
+  encoder6                      decoder6
   """
 
   def __init__(self, encoder_layer, decoder_layer, encoder_layers_num, decoder_layers_num):
@@ -264,3 +267,12 @@ class Encoder_Decoder_mk2(Module):
         trg = layer(trg, curr_srcs[idx], trg_mask, None, None, None)
 
     return trg
+
+def get_n_stacks(n_layers):
+  assert n_layers > 2, "Must have at least more than 2 layers."
+  if n_layers == 3:
+    return 1
+
+  
+  
+  
