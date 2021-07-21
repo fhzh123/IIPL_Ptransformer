@@ -80,7 +80,7 @@ class Trainer:
     def learn(self):
         print("\nbegin training...")
 
-        for epoch in range(self.start_epoch + 1, self.params['num_epoch']+1):
+        for epoch in range(self.start_epoch, self.params['num_epoch']+1):
             start_time = time.time()
 
             epoch_loss = train_loop(self.dataloader['train'], self.model, self.optimizer, self.scheduler, self.criterion, self.device)
