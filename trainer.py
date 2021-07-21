@@ -39,7 +39,7 @@ class Trainer:
 
         preprocess()
 
-        self.params['src_vocab_size'], self.params['trg_vocab_size'] = get_vocab_size()
+        self.params['src_vocab_size'], self.params['tgt_vocab_size'] = get_vocab_size()
 
         self.dataloader = get_dataloader(self.params['batch_size'])
         
@@ -47,7 +47,7 @@ class Trainer:
 
         self.model = build_model(
                             self.params['n_layers'], self.params['emb_size'], self.params['nhead'], 
-                            self.params['src_vocab_size'], self.params['trg_vocab_size'], 
+                            self.params['src_vocab_size'], self.params['tgt_vocab_size'], 
                             self.params['ffn_hid_dim'], self.params['dropout'], variation,
                             load, self.device
                             )
@@ -78,8 +78,8 @@ class Trainer:
             print("Train_loss: {} - Val_loss: {} - Epoch time: {}m {}s - Time left for training: {}m {}s"\
             .format(round(epoch_loss, 3), round(val_loss, 3), minutes, seconds, time_left_min, time_left_sec))
 
-        torch.save(self.model.state_dict(), './data/checkpoints/checkpoint.pth')
-        torch.save(self.model, './data/checkpoints/checkpoint.pt')
+            torch.save(self.model.state_dict(), './data/checkpoints/checkpoint.pth')
+            torch.save(self.model, './data/checkpoints/checkpoint.pt')
 
         get_bleu()
 
@@ -87,31 +87,31 @@ def train_loop(train_iter, model, optimizer, criterion, device):
     model.train()
     epoch_loss = 0
 
-    for src, trg in tqdm(train_iter, desc = 'training...'):
+    for src, tgt in tqdm(train_iter, desc = 'training...'):
 
         src = src.to(device)
-        trg = trg.to(device)
+        tgt = tgt.to(device)
         
         src = src.transpose(0,1) # [length, batch]
-        trg = trg.transpose(0,1) # [length, batch]
+        tgt = tgt.transpose(0,1) # [length, batch]
         
-        trg_input = trg[:-1, :]
+        tgt_input = tgt[:-1, :]
 
-        src_mask, trg_mask, src_key_padding_mask, trg_key_padding_mask = create_mask(src, trg_input, device)
+        src_mask, tgt_mask, src_key_padding_mask, tgt_key_padding_mask = create_mask(src, tgt_input, device)
 
         logits = model(
                   src=src, 
-                  trg=trg_input, 
+                  tgt=tgt_input, 
                   src_mask=src_mask, 
-                  trg_mask=trg_mask,
+                  tgt_mask=tgt_mask,
                   src_key_padding_mask=src_key_padding_mask, 
-                  trg_key_padding_mask=trg_key_padding_mask, 
+                  tgt_key_padding_mask=tgt_key_padding_mask, 
                   memory_key_padding_mask=src_key_padding_mask
                   )
 
         optimizer.zero_grad()
-        trg_out = trg[1:, :]
-        loss = criterion(logits.reshape(-1, logits.shape[-1]), trg_out.reshape(-1))
+        tgt_out = tgt[1:, :]
+        loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
         loss.backward()
         
         
@@ -125,31 +125,31 @@ def val_loop(val_iter, model, criterion, device):
     model.eval()
     losses = 0
 
-    for src, trg in tqdm(val_iter, desc = 'validation...'):
+    for src, tgt in tqdm(val_iter, desc = 'validation...'):
         src = src.to(device)
-        trg = trg.to(device)
+        tgt = tgt.to(device)
         
         src = src.transpose(0,1) # [length, batch]
-        trg = trg.transpose(0,1) # [length, batch]
+        tgt = tgt.transpose(0,1) # [length, batch]
         
         
-        trg_input = trg[:-1, :]
+        tgt_input = tgt[:-1, :]
         
 
-        src_mask, trg_mask, src_key_padding_mask, trg_key_padding_mask = create_mask(src, trg_input, device)
+        src_mask, tgt_mask, src_key_padding_mask, tgt_key_padding_mask = create_mask(src, tgt_input, device)
 
         logits = model(
                   src=src, 
-                  trg=trg_input, 
+                  tgt=tgt_input, 
                   src_mask=src_mask, 
-                  trg_mask=trg_mask,
+                  tgt_mask=tgt_mask,
                   src_key_padding_mask=src_key_padding_mask, 
-                  trg_key_padding_mask=trg_key_padding_mask, 
+                  tgt_key_padding_mask=tgt_key_padding_mask, 
                   memory_key_padding_mask=src_key_padding_mask
                   )
 
-        trg_out = trg[1:, :]
-        loss = criterion(logits.reshape(-1, logits.shape[-1]), trg_out.reshape(-1))
+        tgt_out = tgt[1:, :]
+        loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
         losses += loss.item()
 
     return losses / len(val_iter)
@@ -158,31 +158,31 @@ def test_loop(test_iter, model, criterion, device):
     model.eval()
     test_loss = 0
 
-    for src, trg in tqdm(test_iter, desc = 'test'):
+    for src, tgt in tqdm(test_iter, desc = 'test'):
         src = src.to(device)
-        trg = trg.to(device)
+        tgt = tgt.to(device)
         
         src = src.transpose(0,1) # [length, batch]
-        trg = trg.transpose(0,1) # [length, batch]
+        tgt = tgt.transpose(0,1) # [length, batch]
         
-        trg_input = trg[:-1, :]
+        tgt_input = tgt[:-1, :]
         
 
-        src_mask, trg_mask, src_key_padding_mask, trg_key_padding_mask = create_mask(src, trg_input, device)
+        src_mask, tgt_mask, src_key_padding_mask, tgt_key_padding_mask = create_mask(src, tgt_input, device)
 
         logits = model(
                   src=src, 
-                  trg=trg_input, 
+                  tgt=tgt_input, 
                   src_mask=src_mask, 
-                  trg_mask=trg_mask,
+                  tgt_mask=tgt_mask,
                   src_key_padding_mask=src_key_padding_mask, 
-                  trg_key_padding_mask=trg_key_padding_mask, 
+                  tgt_key_padding_mask=tgt_key_padding_mask, 
                   memory_key_padding_mask=src_key_padding_mask
                   )
 
-        trg_out = trg[1:, :]
+        tgt_out = tgt[1:, :]
         
-        loss = criterion(logits.reshape(-1, logits.shape[-1]), trg_out.reshape(-1))  
+        loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))  
         test_loss += loss.item()
     test_loss /= len(test_iter)
 

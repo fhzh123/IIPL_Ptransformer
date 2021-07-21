@@ -22,7 +22,7 @@ def preprocess(data_path="./data/wmt16", preprocess_path="./data/preprocessed"):
 	en_list = [en for en in file_list if en[-2:] == "en"]
 
 	src_list = []
-	trg_list = []
+	tgt_list = []
 
 	for de in de_list:
 		with open(os.path.join(data_path, de), 'r') as f:
@@ -39,13 +39,13 @@ def preprocess(data_path="./data/wmt16", preprocess_path="./data/preprocessed"):
 			for text in f.readlines():
 				stripped_text = text.rstrip("\n")
 				
-				# if trg_max_len < len(stripped_text):
-				# 	trg_max_len = len(stripped_text)
+				# if tgt_max_len < len(stripped_text):
+				# 	tgt_max_len = len(stripped_text)
 
 				if len(stripped_text) <= 300:
-					trg_list.append(stripped_text)
+					tgt_list.append(stripped_text)
 
-	train, val, test = divide_sentences({'src_lang': src_list, 'trg_lang': trg_list})
+	train, val, test = divide_sentences({'src_lang': src_list, 'tgt_lang': tgt_list})
 
 	# 3) Path setting
 	if not os.path.exists(preprocess_path):
@@ -60,8 +60,8 @@ def preprocess(data_path="./data/wmt16", preprocess_path="./data/preprocessed"):
 		for text in train['src_lang']:
 			f.write(f'{text}\n')
 
-	with open(f'{preprocess_path}/trg_train.txt', 'w') as f:
-		for text in train['trg_lang']:
+	with open(f'{preprocess_path}/tgt_train.txt', 'w') as f:
+		for text in train['tgt_lang']:
 			f.write(f'{text}\n')
 
 	# Save valid sentences
@@ -69,8 +69,8 @@ def preprocess(data_path="./data/wmt16", preprocess_path="./data/preprocessed"):
 		for text in val['src_lang']:
 			f.write(f'{text}\n')
 
-	with open(f'{preprocess_path}/trg_val.txt', 'w') as f:
-		for text in val['trg_lang']:
+	with open(f'{preprocess_path}/tgt_val.txt', 'w') as f:
+		for text in val['tgt_lang']:
 			f.write(f'{text}\n')
 
 	# Save test sentences
@@ -78,8 +78,8 @@ def preprocess(data_path="./data/wmt16", preprocess_path="./data/preprocessed"):
 		for text in test['src_lang']:
 			f.write(f'{text}\n')
 
-	with open(f'{preprocess_path}/trg_test.txt', 'w') as f:
-		for text in test['trg_lang']:
+	with open(f'{preprocess_path}/tgt_test.txt', 'w') as f:
+		for text in test['tgt_lang']:
 			f.write(f'{text}\n')
 
 	#===================================#
@@ -97,18 +97,18 @@ def preprocess(data_path="./data/wmt16", preprocess_path="./data/preprocessed"):
 
 	de_trainer = BpeTrainer(
 			special_tokens=["[UNK]", "[BOS]", "[EOS]", "[PAD]", "[MASK]"],
-			vocab_size=37000, min_frequency=5
+			vocab_size=37000, min_frequency=3
 	)
 	en_trainer = BpeTrainer(
 			special_tokens=["[UNK]", "[BOS]", "[EOS]", "[PAD]", "[MASK]"],
-			vocab_size=37000, min_frequency=5
+			vocab_size=37000, min_frequency=3
 	)
 
 	de_tokenizer.pre_tokenizer = Whitespace()
 	en_tokenizer.pre_tokenizer = Whitespace()
 
 	de_tokenizer.train_from_iterator(src_list, de_trainer)
-	en_tokenizer.train_from_iterator(trg_list, en_trainer)
+	en_tokenizer.train_from_iterator(tgt_list, en_trainer)
 
 	de_tokenizer.post_processor = TemplateProcessing(
 			single="[BOS] $A [EOS]",
@@ -134,6 +134,6 @@ def preprocess(data_path="./data/wmt16", preprocess_path="./data/preprocessed"):
 	en_tokenizer.save(f'{preprocess_path}/en_tokenizer.json')
 
 	print("EXAMPLE:\n DE: {}\n EN: {}\n".format(de_tokenizer.encode(
-			src_list[0]).tokens, en_tokenizer.encode(trg_list[0]).tokens))
+			src_list[0]).tokens, en_tokenizer.encode(tgt_list[0]).tokens))
 
 	print(f'Done! ; {round((time.time()-start_time)/60, 3)}min spend')

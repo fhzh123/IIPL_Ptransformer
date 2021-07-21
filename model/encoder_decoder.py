@@ -21,7 +21,7 @@ class Encoder_Decoder_mk1(Module):
       self.encoder_layers_num = encoder_layers_num
       self.decoder_layers_num = decoder_layers_num
 
-  def forward(self, src, src_mask, src_key_padding_mask, trg, memory_key_padding_mask, trg_mask, trg_key_padding_mask):
+  def forward(self, src, src_mask, src_key_padding_mask, tgt, memory_key_padding_mask, tgt_mask, tgt_key_padding_mask):
     if self.encoder_layers_num > self.decoder_layers_num:
       n = self.encoder_layers_num - self.decoder_layers_num
 
@@ -37,9 +37,9 @@ class Encoder_Decoder_mk1(Module):
       src_list.append(src)
         
     for idx, layer in enumerate(self.decoder_layers):
-      trg = layer(trg, src_list[idx], trg_mask, None, trg_key_padding_mask, memory_key_padding_mask)
+      tgt = layer(tgt, src_list[idx], tgt_mask, None, tgt_key_padding_mask, memory_key_padding_mask)
 
-    return trg
+    return tgt
     
   def encode(self, src, src_mask):
     src_list = []
@@ -50,12 +50,12 @@ class Encoder_Decoder_mk1(Module):
 
     return src_list
 
-  def decode(self, trg, memory, trg_mask):
+  def decode(self, tgt, memory, tgt_mask):
     
     for idx, layer in enumerate(self.decoder_layers):
-      trg = layer(trg, memory[idx], trg_mask, None, None)
+      tgt = layer(tgt, memory[idx], tgt_mask, None, None)
 
-    return trg
+    return tgt
 
 class Encoder_Decoder_mk2(Module):
   """
@@ -110,7 +110,7 @@ class Encoder_Decoder_mk2(Module):
           clones(decoder_layer, decoder_layers_num % 3)
       )
 
-  def forward(self, src, src_mask, src_key_padding_mask, trg, memory_key_padding_mask, trg_mask, trg_key_padding_mask):
+  def forward(self, src, src_mask, src_key_padding_mask, tgt, memory_key_padding_mask, tgt_mask, tgt_key_padding_mask):
     if self.encoder_layers_num > self.decoder_layers_num:
       n = self.encoder_layers_num - self.decoder_layers_num
     
@@ -134,9 +134,9 @@ class Encoder_Decoder_mk2(Module):
     for idx, stack in enumerate(self.decoder_layer_stacks):
       curr_srcs = src_list[idx]
       for idx, layer in enumerate(stack):
-        trg = layer(trg, curr_srcs[idx], trg_mask, None, trg_key_padding_mask, memory_key_padding_mask)
+        tgt = layer(tgt, curr_srcs[idx], tgt_mask, None, tgt_key_padding_mask, memory_key_padding_mask)
 
-    return trg
+    return tgt
 
   def encode(self, src, src_mask):
     src_list = []
@@ -150,14 +150,14 @@ class Encoder_Decoder_mk2(Module):
 
       src_list.append(src)
 
-  def decode(self, trg, memory, trg_mask):
+  def decode(self, tgt, memory, tgt_mask):
 
     for idx, stack in enumerate(self.decoder_layer_stacks):
       curr_srcs = memory[idx]
       for idx, layer in enumerate(stack):
-        trg = layer(trg, curr_srcs[idx], trg_mask, None, None, None)
+        tgt = layer(tgt, curr_srcs[idx], tgt_mask, None, None, None)
 
-    return trg
+    return tgt
 
 
 class Encoder_Decoder_mk3(Module):
@@ -217,7 +217,7 @@ class Encoder_Decoder_mk3(Module):
           clones(decoder_layer, decoder_layers_num % 3)
       )
 
-  def forward(self, src, src_mask, src_key_padding_mask, trg, memory_key_padding_mask, trg_mask, trg_key_padding_mask):
+  def forward(self, src, src_mask, src_key_padding_mask, tgt, memory_key_padding_mask, tgt_mask, tgt_key_padding_mask):
     if self.encoder_layers_num > self.decoder_layers_num:
       n = self.encoder_layers_num - self.decoder_layers_num
 
@@ -242,10 +242,10 @@ class Encoder_Decoder_mk3(Module):
     for idx, stack in enumerate(self.decoder_layer_stacks):
       curr_srcs = src_list[idx]
       for idx, layer in enumerate(stack):
-        trg = layer(trg, curr_srcs[idx], trg_mask, None,
-                    trg_key_padding_mask, memory_key_padding_mask)
+        tgt = layer(tgt, curr_srcs[idx], tgt_mask, None,
+                    tgt_key_padding_mask, memory_key_padding_mask)
 
-    return trg
+    return tgt
 
   def encode(self, src, src_mask):
     src_list = []
@@ -259,14 +259,14 @@ class Encoder_Decoder_mk3(Module):
 
       src_list.append(src)
 
-  def decode(self, trg, memory, trg_mask):
+  def decode(self, tgt, memory, tgt_mask):
 
     for idx, stack in enumerate(self.decoder_layer_stacks):
       curr_srcs = memory[idx]
       for idx, layer in enumerate(stack):
-        trg = layer(trg, curr_srcs[idx], trg_mask, None, None, None)
+        tgt = layer(tgt, curr_srcs[idx], tgt_mask, None, None, None)
 
-    return trg
+    return tgt
 
 def get_n_stacks(n_layers):
   assert n_layers > 2, "Must have at least more than 2 layers."

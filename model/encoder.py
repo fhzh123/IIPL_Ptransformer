@@ -17,7 +17,7 @@ class EncoderLayer(nn.Module):
 
     def forward(self, src, src_mask, src_key_padding_mask):
         # MultiheadAttention
-        attn, _ = self.attn(
+        attn_output, _ = self.attn(
                         src, src, src, 
                         attn_mask = src_mask, 
                         key_padding_mask = src_key_padding_mask
@@ -26,13 +26,13 @@ class EncoderLayer(nn.Module):
         # x = [src_seq_len, batch, embed_size]
         
         # Sublayer Connection
-        x = self.norm1(src + self.dropout(attn))
+        x = self.norm1(src + self.dropout(attn_output))
 
         # FeedForward 
-        attn = self.ff(x)
+        attn_output = self.ff(x)
 
         # Sublayer Connection
-        x = self.norm2(x + self.dropout(attn))
+        x = self.norm2(x + self.dropout(attn_output))
 
         return x
 
@@ -46,10 +46,10 @@ class Encoder(nn.Module):
 
     def forward(self, src, src_mask, src_key_padding_mask=None):
         for layer in self.layers:
-            x = layer(
+            src = layer(
                 src=src, 
                 src_mask=src_mask, 
                 src_key_padding_mask=src_key_padding_mask
                 )
 
-        return x
+        return src
