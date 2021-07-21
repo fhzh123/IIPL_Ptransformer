@@ -37,10 +37,10 @@ class DecoderLayer(nn.Module):
         x = self.norm2(x + self.dropout(attn_output))
 
         # FeedForward 
-        attn = self.ff(x)
+        attn_output = self.ff(x)
 
         # Sublayer Connection
-        x = self.norm3(x + self.dropout(attn))
+        x = self.norm3(x + self.dropout(attn_output))
 
         return x
 
