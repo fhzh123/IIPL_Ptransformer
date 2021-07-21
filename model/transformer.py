@@ -25,16 +25,16 @@ class IIPL_Transformer(nn.Module):
     self.tgt_tok_emb = Embedding(tgt_vocab_size, emb_size)
     self.positional_encoding = PositionalEncoding(emb_size, dropout=dropout)
     self.generator = nn.Linear(emb_size, tgt_vocab_size)
-    # self.attn = MultiHeadAttention(emb_size, nhead, dropout)
-    self.attn = nn.MultiheadAttention(emb_size, nhead, dropout)
-    # self.ff = PositionWiseFeedForward(emb_size, dim_feedforward)
+    self.attn = MultiHeadAttention(emb_size, nhead, dropout)
+    # self.attn = nn.MultiheadAttention(emb_size, nhead, dropout)
+    self.ff = PositionWiseFeedForward(emb_size, dim_feedforward)
     self.encoder = Encoder(
-      TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_encoder_layers
-      # EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout), num_encoder_layers
+      # TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_encoder_layers
+      EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout), num_encoder_layers
       )
     self.decoder = Decoder(
-      TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_decoder_layers
-      # DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout), num_decoder_layers
+      # TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_decoder_layers
+      DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout), num_decoder_layers
       )
 
   def forward(self,

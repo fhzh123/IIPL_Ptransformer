@@ -46,10 +46,10 @@ class Encoder(nn.Module):
 
     def forward(self, src, src_mask, src_key_padding_mask=None):
         for layer in self.layers:
-            x = layer(
+            src = layer(
                 src=src, 
                 src_mask=src_mask, 
                 src_key_padding_mask=src_key_padding_mask
                 )
 
-        return x
+        return src
