@@ -8,11 +8,9 @@ from tqdm import tqdm
 import torch
 from torch.nn import functional as F
 
-def get_bleu():
+def get_bleu(device):
     model = torch.load("./data/checkpoints/checkpoint.pt")
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    
     chencherry = bs.SmoothingFunction()
     bleu_scores = 0
     src_list, tgt_list = [], []

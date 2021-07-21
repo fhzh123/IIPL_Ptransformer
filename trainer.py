@@ -101,7 +101,7 @@ class Trainer:
                         'scheduler' : self.scheduler.state_dict()
                         }, f'./data/checkpoints/{self.variation}_checkpoint.pth.tar')
 
-        get_bleu()
+        get_bleu(self.device)
 
 def train_loop(train_iter, model, optimizer, scheduler, criterion, device):
     model.train()

@@ -24,7 +24,7 @@ class ScheduledOptim:
 
     def state_dict(self):
         
-        state_dict = {key: value for key, value in self.__dict__.items() if key not in (optimizer)}
+        state_dict = {key: value for key, value in self.__dict__.items() if key != 'optimizer'}
         return state_dict
 
     def load_state_dict(self,state_dict):
