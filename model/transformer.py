@@ -131,7 +131,6 @@ def build_model(num_layers,
                 dim_feedforward=2048,
                 dropout=0.1,
                 variation=False,
-                load=False,
                 device=None):
   if variation:
     print("\nBuilding P-Transformer..")
@@ -158,12 +157,10 @@ def build_model(num_layers,
         dropout=dropout
     )
     
-  if load:
-    model.load_state_dict(torch.load('./data/checkpoints/checkpoint.pth', map_location=device))
-  else:
-    for p in model.parameters():
-      if p.dim() > 1:
-        nn.init.xavier_uniform_(p)
+  
+  for p in model.parameters():
+    if p.dim() > 1:
+      nn.init.xavier_uniform_(p)
 
   model = model.to(device)
 
