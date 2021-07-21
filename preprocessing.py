@@ -97,11 +97,11 @@ def preprocess(data_path="./data/wmt16", preprocess_path="./data/preprocessed"):
 
 	de_trainer = BpeTrainer(
 			special_tokens=["[UNK]", "[BOS]", "[EOS]", "[PAD]", "[MASK]"],
-			vocab_size=37000, min_frequency=5
+			vocab_size=37000, min_frequency=3
 	)
 	en_trainer = BpeTrainer(
 			special_tokens=["[UNK]", "[BOS]", "[EOS]", "[PAD]", "[MASK]"],
-			vocab_size=37000, min_frequency=5
+			vocab_size=37000, min_frequency=3
 	)
 
 	de_tokenizer.pre_tokenizer = Whitespace()
