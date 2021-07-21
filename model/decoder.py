@@ -12,21 +12,21 @@ class DecoderLayer(nn.Module):
         self.norm3 = nn.LayerNorm(embed_size, 1e-6)
         self.dropout = nn.Dropout(dropout)
         
-    def forward(self, trg, memory, trg_mask, memory_mask, trg_key_padding_mask, memory_key_padding_mask):
+    def forward(self, tgt, memory, tgt_mask, memory_mask, tgt_key_padding_mask, memory_key_padding_mask):
         # MultiheadAttention
-        attn, _ = self.attn(
-                 trg, trg, trg, 
-                 attn_mask = trg_mask,
-                 key_padding_mask = trg_key_padding_mask
+        attn_output, _ = self.attn(
+                 tgt, tgt, tgt, 
+                 attn_mask = tgt_mask,
+                 key_padding_mask = tgt_key_padding_mask
                  )
         
-        # x = [trg_seq_len, batch, embed_size]
+        # x = [tgt_seq_len, batch, embed_size]
 
         # Sublayer Connection
-        x = self.norm1(trg + self.dropout(attn))
+        x = self.norm1(tgt + self.dropout(attn_output))
 
         # MultiheadAttention
-        attn, _= self.attn(
+        attn_output, _= self.attn(
                  x, memory, memory,
                  key_padding_mask = memory_key_padding_mask
             )
@@ -34,13 +34,13 @@ class DecoderLayer(nn.Module):
         # x = [src_seq_len, batch, embed_size]
 
         # Sublayer Connection
-        x = self.norm2(x + self.dropout(attn))
+        x = self.norm2(x + self.dropout(attn_output))
 
         # FeedForward 
-        attn = self.ff(x)
+        attn_output = self.ff(x)
 
         # Sublayer Connection
-        x = self.norm3(x + self.dropout(attn))
+        x = self.norm3(x + self.dropout(attn_output))
 
         return x
 
@@ -51,15 +51,15 @@ class Decoder(nn.Module):
         # Make N layers of encoder layers.
         self.layers = clones(layer, N)
 
-    def forward(self, trg, memory, trg_mask, memory_mask, trg_key_padding_mask, memory_key_padding_mask):
+    def forward(self, tgt, memory, tgt_mask, memory_mask, tgt_key_padding_mask, memory_key_padding_mask):
         for layer in self.layers:
-            trg = layer(
-                trg=trg, 
+            tgt = layer(
+                tgt=tgt, 
                 memory=memory, 
-                trg_mask=trg_mask, 
+                tgt_mask=tgt_mask, 
                 memory_mask=memory_mask, 
-                trg_key_padding_mask=trg_key_padding_mask, 
+                tgt_key_padding_mask=tgt_key_padding_mask, 
                 memory_key_padding_mask=memory_key_padding_mask
                 )
         
-        return trg
+        return tgt
