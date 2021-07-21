@@ -9,8 +9,8 @@ from torch.utils.data import DataLoader
 
 def get_dataloader(batch_size, num_workers=4):
     
-    src_train, trg_train = [], []
-    src_val, trg_val = [], []
+    src_train, tgt_train = [], []
+    src_val, tgt_val = [], []
 
     # 1) Data open
     gc.disable()
@@ -20,10 +20,10 @@ def get_dataloader(batch_size, num_workers=4):
             src_train.append(text)
         del data_
     
-    with open(os.path.join("./data/preprocessed", 'trg_train.txt'), 'r') as f:
+    with open(os.path.join("./data/preprocessed", 'tgt_train.txt'), 'r') as f:
         data_ = f.readlines()
         for text in data_:
-            trg_train.append(text)
+            tgt_train.append(text)
         del data_
 
     with open(os.path.join("./data/preprocessed", 'src_val.txt'), 'r') as f:
@@ -32,10 +32,10 @@ def get_dataloader(batch_size, num_workers=4):
             src_val.append(text)
         del data_
 
-    with open(os.path.join("./data/preprocessed", 'trg_val.txt'), 'r') as f:
+    with open(os.path.join("./data/preprocessed", 'tgt_val.txt'), 'r') as f:
         data_ = f.readlines()
         for text in data_:
-            trg_val.append(text)
+            tgt_val.append(text)
         del data_
 
     de_tokenizer = Tokenizer.from_file(os.path.join("./data/preprocessed", 'de_tokenizer.json'))
@@ -46,8 +46,8 @@ def get_dataloader(batch_size, num_workers=4):
     
     # 2) Dataloader setting
     dataset_dict = {
-        'train': CustomDataset(src_train, trg_train, de_tokenizer, en_tokenizer),
-        'valid': CustomDataset(src_val, trg_val, de_tokenizer, en_tokenizer)
+        'train': CustomDataset(src_train, tgt_train, de_tokenizer, en_tokenizer),
+        'valid': CustomDataset(src_val, tgt_val, de_tokenizer, en_tokenizer)
     }
 
     dataloader_dict = {

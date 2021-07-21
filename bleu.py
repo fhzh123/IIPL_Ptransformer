@@ -15,7 +15,7 @@ def get_bleu():
 
     chencherry = bs.SmoothingFunction()
     bleu_scores = 0
-    src_list, trg_list = [], []
+    src_list, tgt_list = [], []
 
     with open(os.path.join("./data/preprocessed", 'src_test.txt'), 'r') as f:
         data_ = f.readlines()
@@ -23,13 +23,13 @@ def get_bleu():
             src_list.append(text)
         del data_
 
-    with open(os.path.join("./data/preprocessed", 'trg_test.txt'), 'r') as f:
+    with open(os.path.join("./data/preprocessed", 'tgt_test.txt'), 'r') as f:
         data_ = f.readlines()
         for text in data_:
-            trg_list.append(text)
+            tgt_list.append(text)
         del data_
 
-    for de, en in zip(src_list, trg_list):
+    for de, en in zip(src_list, tgt_list):
         candidate = translate(model, de, device).split()
         reference = [en.split()]
         print(candidate, reference)
