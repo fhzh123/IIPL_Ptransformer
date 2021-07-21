@@ -14,7 +14,7 @@ class DecoderLayer(nn.Module):
         
     def forward(self, trg, memory, trg_mask, memory_mask, trg_key_padding_mask, memory_key_padding_mask):
         # MultiheadAttention
-        attn, _ = self.attn(
+        attn_output, _ = self.attn(
                  trg, trg, trg, 
                  attn_mask = trg_mask,
                  key_padding_mask = trg_key_padding_mask
@@ -23,10 +23,10 @@ class DecoderLayer(nn.Module):
         # x = [trg_seq_len, batch, embed_size]
 
         # Sublayer Connection
-        x = self.norm1(trg + self.dropout(attn))
+        x = self.norm1(trg + self.dropout(attn_output))
 
         # MultiheadAttention
-        attn, _= self.attn(
+        attn_output, _= self.attn(
                  x, memory, memory,
                  key_padding_mask = memory_key_padding_mask
             )
@@ -34,7 +34,7 @@ class DecoderLayer(nn.Module):
         # x = [src_seq_len, batch, embed_size]
 
         # Sublayer Connection
-        x = self.norm2(x + self.dropout(attn))
+        x = self.norm2(x + self.dropout(attn_output))
 
         # FeedForward 
         attn = self.ff(x)

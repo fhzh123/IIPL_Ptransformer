@@ -51,7 +51,7 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
                     .type(torch.bool)).to(device)
         out = model.decode(ys, memory, tgt_mask)
         out = out.transpose(0, 1)
-        prob = model.generator(out[:, -1])
+        prob = F.log_softmax(model.generator(out[:, -1]), dim=-1)
         _, next_word = torch.max(prob, dim=1)
         next_word = next_word.item()
 
@@ -75,4 +75,5 @@ def translate(model, src_sentence, device):
     src_mask = (torch.zeros(num_tokens, num_tokens)).type(torch.bool)
     tgt_tokens = greedy_decode(
         model,  src, src_mask, max_len=num_tokens + 5, start_symbol=BOS_IDX, device=device).flatten()
-    return " ".join(en_tokenizer.decode(list(tgt_tokens.cpu().numpy())))
+    return "".join(en_tokenizer.decode(list(tgt_tokens.cpu().numpy())))
+

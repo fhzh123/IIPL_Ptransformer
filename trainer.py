@@ -78,8 +78,8 @@ class Trainer:
             print("Train_loss: {} - Val_loss: {} - Epoch time: {}m {}s - Time left for training: {}m {}s"\
             .format(round(epoch_loss, 3), round(val_loss, 3), minutes, seconds, time_left_min, time_left_sec))
 
-        torch.save(self.model.state_dict(), './data/checkpoints/checkpoint.pth')
-        torch.save(self.model, './data/checkpoints/checkpoint.pt')
+            torch.save(self.model.state_dict(), './data/checkpoints/checkpoint.pth')
+            torch.save(self.model, './data/checkpoints/checkpoint.pt')
 
         get_bleu()
 
