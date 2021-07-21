@@ -21,7 +21,9 @@ class ScheduledOptim:
             np.power(self.step_num, -0.5),
             self.step_num * np.power(self.warmup_steps, -1.5)
         ])
-
+    def zero_grad(self):
+        self.optimizer.zero_grad()
+        
     def state_dict(self):
         
         state_dict = {key: value for key, value in self.__dict__.items() if key != 'optimizer'}

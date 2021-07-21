@@ -83,7 +83,7 @@ class Trainer:
         for epoch in range(self.start_epoch, self.params['num_epoch']+1):
             start_time = time.time()
 
-            epoch_loss = train_loop(self.dataloader['train'], self.model, self.optimizer, self.scheduler, self.criterion, self.device)
+            epoch_loss = train_loop(self.dataloader['train'], self.model, self.scheduler, self.criterion, self.device)
 
             val_loss = val_loop(self.dataloader['valid'], self.model, self.criterion, self.device)
 
@@ -97,14 +97,14 @@ class Trainer:
 
             torch.save({'epoch' : epoch,
                         'model' : self.model.state_dict(),
-                        'optimizer' : self.optimizer.state_dict(),
+                        'optimizer' : self.scheduler.optimizer.state_dict(),
                         'scheduler' : self.scheduler.state_dict()
                         }, f'./data/checkpoints/{self.variation}_checkpoint.pth.tar')
             torch.save(self.model, f'./data/checkpoints/{self.variation}_checkpoint.pt')
 
         get_bleu(self.device,self.variation)
 
-def train_loop(train_iter, model, optimizer, scheduler, criterion, device):
+def train_loop(train_iter, model, scheduler, criterion, device):
     model.train()
     epoch_loss = 0
 
@@ -130,7 +130,8 @@ def train_loop(train_iter, model, optimizer, scheduler, criterion, device):
                   memory_key_padding_mask=src_key_padding_mask
                   )
 
-        optimizer.zero_grad()
+        scheduler.zero_grad()
+
         tgt_out = tgt[1:, :]
         loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
         loss.backward()
