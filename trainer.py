@@ -5,6 +5,8 @@ import numpy as np
 from tqdm import tqdm
 import torch.nn as nn
 from torch import optim
+import os
+
 from bleu import get_bleu
 from my_optim import ScheduledOptim
 from preprocessing import preprocess
@@ -42,7 +44,9 @@ class Trainer:
         self.params['src_vocab_size'], self.params['tgt_vocab_size'] = get_vocab_size()
 
         self.dataloader = get_dataloader(self.params['batch_size'])
-        
+
+        #os.environ["CUDA_VISIBLE_DEVICES"]="1"
+
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.model = build_model(
@@ -60,12 +64,12 @@ class Trainer:
             hidden_dim=self.params['ffn_hid_dim']
         )
         
-        
-        PATH = f'./data/checkpoints/{self.variation}_checkpoint.pth.tar'
+        self.start_epoch = 0
 
         if load:
+            PATH = f'./data/checkpoints/{self.variation}_checkpoint.pth.tar'
             checkpoint = torch.load(PATH)
-            start_epoch = checkpoint['epoch']+1
+            self.start_epoch = checkpoint['epoch']+1
             self.model.load_state_dict(checkpoint['model'])
             self.optimizer.load_state_dict(checkpoint['optimizer'])
             self.scheduler.load_state_dict(checkpoint['scheduler'])
@@ -76,7 +80,7 @@ class Trainer:
     def learn(self):
         print("\nbegin training...")
 
-        for epoch in range(self.params['num_epoch']):
+        for epoch in range(self.start_epoch + 1, self.params['num_epoch']+1):
             start_time = time.time()
 
             epoch_loss = train_loop(self.dataloader['train'], self.model, self.optimizer, self.scheduler, self.criterion, self.device)
@@ -87,7 +91,7 @@ class Trainer:
 
             minutes, seconds, time_left_min, time_left_sec = epoch_time(end_time-start_time, epoch, self.params['num_epoch'])
         
-            print("Epoch: {} out of {}".format(epoch+1, self.params['num_epoch']))
+            print("Epoch: {} out of {}".format(epoch, self.params['num_epoch']))
             print("Train_loss: {} - Val_loss: {} - Epoch time: {}m {}s - Time left for training: {}m {}s"\
             .format(round(epoch_loss, 3), round(val_loss, 3), minutes, seconds, time_left_min, time_left_sec))
 
