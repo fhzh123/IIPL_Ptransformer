@@ -100,8 +100,9 @@ class Trainer:
                         'optimizer' : self.optimizer.state_dict(),
                         'scheduler' : self.scheduler.state_dict()
                         }, f'./data/checkpoints/{self.variation}_checkpoint.pth.tar')
+            torch.save(self.model, f'./data/checkpoints/{self.variation}_checkpoint.pt')
 
-        get_bleu(self.device)
+        get_bleu(self.device,self.variation)
 
 def train_loop(train_iter, model, optimizer, scheduler, criterion, device):
     model.train()
