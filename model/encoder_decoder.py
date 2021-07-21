@@ -1,6 +1,7 @@
 import enum
 from util import clones
 from torch.nn import Module
+import numpy as np
 
 class Encoder_Decoder_mk1(Module):
   """
@@ -268,11 +269,9 @@ class Encoder_Decoder_mk3(Module):
 
     return tgt
 
-def get_n_stacks(n_layers):
-  assert n_layers > 2, "Must have at least more than 2 layers."
-  if n_layers == 3:
-    return 1
-
+def get_n_stacks(n_layers,partition):
   
+  part = np.full(partition,n_layers//partition,dtype=int)
+  part[ : n_layers%partition] += 1
   
-  
+  return list(part)
