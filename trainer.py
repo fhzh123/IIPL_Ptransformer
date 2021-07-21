@@ -49,15 +49,28 @@ class Trainer:
                             self.params['n_layers'], self.params['emb_size'], self.params['nhead'], 
                             self.params['src_vocab_size'], self.params['tgt_vocab_size'], 
                             self.params['ffn_hid_dim'], self.params['dropout'], variation,
-                            load, self.device
+                            self.device
                             )
+        self.variation = variation
+        self.optimizer = optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=5e-5)
 
-        self.optimizer = ScheduledOptim(
-            optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=5e-5),
+        self.scheduler = ScheduledOptim(
+            self.optimizer,
             warmup_steps=4000,
             hidden_dim=self.params['ffn_hid_dim']
         )
+        
+        
+        PATH = f'./data/checkpoints/{self.variation}_checkpoint.pth.tar'
 
+        if load:
+            checkpoint = torch.load(PATH)
+            start_epoch = checkpoint['epoch']+1
+            self.model.load_state_dict(checkpoint['model'])
+            self.optimizer.load_state_dict(checkpoint['optimizer'])
+            self.scheduler.load_state_dict(checkpoint['scheduler'])
+            del checkpoint
+        
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 
     def learn(self):
@@ -66,7 +79,7 @@ class Trainer:
         for epoch in range(self.params['num_epoch']):
             start_time = time.time()
 
-            epoch_loss = train_loop(self.dataloader['train'], self.model, self.optimizer, self.criterion, self.device)
+            epoch_loss = train_loop(self.dataloader['train'], self.model, self.optimizer, self.scheduler, self.criterion, self.device)
 
             val_loss = val_loop(self.dataloader['valid'], self.model, self.criterion, self.device)
 
@@ -78,12 +91,15 @@ class Trainer:
             print("Train_loss: {} - Val_loss: {} - Epoch time: {}m {}s - Time left for training: {}m {}s"\
             .format(round(epoch_loss, 3), round(val_loss, 3), minutes, seconds, time_left_min, time_left_sec))
 
-            torch.save(self.model.state_dict(), './data/checkpoints/checkpoint.pth')
-            torch.save(self.model, './data/checkpoints/checkpoint.pt')
+            torch.save({'epoch' : epoch,
+                        'model' : self.model.state_dict(),
+                        'optimizer' : self.optimizer.state_dict(),
+                        'scheduler' : self.scheduler.state_dict()
+                        }, f'./data/checkpoints/{self.variation}_checkpoint.pth.tar')
 
         get_bleu()
 
-def train_loop(train_iter, model, optimizer, criterion, device):
+def train_loop(train_iter, model, optimizer, scheduler, criterion, device):
     model.train()
     epoch_loss = 0
 
@@ -115,7 +131,7 @@ def train_loop(train_iter, model, optimizer, criterion, device):
         loss.backward()
         
         
-        optimizer.step()
+        scheduler.step()
 
         epoch_loss += loss.item()
 

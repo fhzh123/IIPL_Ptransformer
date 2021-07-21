@@ -15,12 +15,18 @@ class ScheduledOptim:
             p['lr'] = lr
             
         self.optimizer.step()
-    
-    def zero_grad(self):
-        self.optimizer.zero_grad()
-    
+        
     def get_scale(self):
         return np.min([
             np.power(self.step_num, -0.5),
             self.step_num * np.power(self.warmup_steps, -1.5)
         ])
+
+    def state_dict(self):
+        
+        state_dict = {key: value for key, value in self.__dict__.items() if key not in (optimizer)}
+        return state_dict
+
+    def load_state_dict(self,state_dict):
+
+        self.__dict__.update(state_dict)
