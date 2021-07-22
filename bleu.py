@@ -8,10 +8,8 @@ from tqdm import tqdm
 import torch
 from torch.nn import functional as F
 
-def get_bleu(device,variation):
+def get_bleu(model,device,variation):
 
-    model = torch.load(f'./data/checkpoints/{variation}_checkpoint.pt')
-    
     chencherry = bs.SmoothingFunction()
     bleu_scores = 0
     src_list, tgt_list = [], []
