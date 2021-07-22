@@ -102,7 +102,7 @@ class Trainer:
                         }, f'./data/checkpoints/{self.variation}_checkpoint.pth.tar')
             torch.save(self.model, f'./data/checkpoints/{self.variation}_checkpoint.pt')
 
-        get_bleu(self.device,self.variation)
+        get_bleu(self.model,self.device,self.variation)
 
 def train_loop(train_iter, model, scheduler, criterion, device):
     model.train()
