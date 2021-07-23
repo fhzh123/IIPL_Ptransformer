@@ -52,9 +52,11 @@ class Decoder(nn.Module):
         self.layers = clones(layer, N)
 
     def forward(self, tgt, memory, tgt_mask, memory_mask, tgt_key_padding_mask, memory_key_padding_mask):
+        x = tgt
+
         for layer in self.layers:
-            tgt = layer(
-                tgt=tgt, 
+            x = layer(
+                tgt=x, 
                 memory=memory, 
                 tgt_mask=tgt_mask, 
                 memory_mask=memory_mask, 
@@ -62,4 +64,4 @@ class Decoder(nn.Module):
                 memory_key_padding_mask=memory_key_padding_mask
                 )
         
-        return tgt
+        return x

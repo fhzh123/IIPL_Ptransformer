@@ -16,7 +16,40 @@ def preprocess(data_path="./data/wmt16", preprocess_path="./data/preprocessed"):
 	#============Data Load==============#
 	#===================================#
 
+	file_list2 = os.listdir("./data/wmt14")
+
+	de_list2 = [de for de in file_list2 if de[-2:] == "de"]
+	en_list2 = [en for en in file_list2 if en[-2:] == "en"]
+
+	src_list2 = []
+	tgt_list2 = []
+
+	for de in de_list2:
+		with open(os.path.join("./data/wmt14", de), 'r') as f:
+			for text in f.readlines():
+				stripped_text = text.rstrip("\n")
+
+				# if src_max_len < len(stripped_text):
+				# 	src_max_len = len(stripped_text)
+				if len(stripped_text) <= 300:
+					src_list2.append(stripped_text)
+
+	for en in en_list2:
+		with open(os.path.join("./data/wmt14", en), 'r') as f:
+			for text in f.readlines():
+				stripped_text = text.rstrip("\n")
+
+				# if tgt_max_len < len(stripped_text):
+				# 	tgt_max_len = len(stripped_text)
+
+				if len(stripped_text) <= 300:
+					tgt_list2.append(stripped_text)
+
+
+
 	file_list = os.listdir(data_path)
+
+	
 
 	de_list = [de for de in file_list if de[-2:] == "de"]
 	en_list = [en for en in file_list if en[-2:] == "en"]
@@ -31,8 +64,8 @@ def preprocess(data_path="./data/wmt16", preprocess_path="./data/preprocessed"):
 				
 				# if src_max_len < len(stripped_text):
 				# 	src_max_len = len(stripped_text)
-				if len(stripped_text) <= 300:
-					src_list.append(stripped_text)
+				# if len(stripped_text) <= 300:
+				src_list.append(stripped_text)
 
 	for en in en_list:
 		with open(os.path.join(data_path, en), 'r') as f:
@@ -42,8 +75,8 @@ def preprocess(data_path="./data/wmt16", preprocess_path="./data/preprocessed"):
 				# if tgt_max_len < len(stripped_text):
 				# 	tgt_max_len = len(stripped_text)
 
-				if len(stripped_text) <= 300:
-					tgt_list.append(stripped_text)
+				# if len(stripped_text) <= 300:
+				tgt_list.append(stripped_text)
 
 	train, val, test = divide_sentences({'src_lang': src_list, 'tgt_lang': tgt_list})
 
@@ -107,8 +140,8 @@ def preprocess(data_path="./data/wmt16", preprocess_path="./data/preprocessed"):
 	de_tokenizer.pre_tokenizer = Whitespace()
 	en_tokenizer.pre_tokenizer = Whitespace()
 
-	de_tokenizer.train_from_iterator(src_list, de_trainer)
-	en_tokenizer.train_from_iterator(tgt_list, en_trainer)
+	de_tokenizer.train_from_iterator(src_list2, de_trainer)
+	en_tokenizer.train_from_iterator(tgt_list2, en_trainer)
 
 	de_tokenizer.post_processor = TemplateProcessing(
 			single="[BOS] $A [EOS]",

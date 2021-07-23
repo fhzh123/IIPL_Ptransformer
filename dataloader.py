@@ -6,6 +6,7 @@ from tokenizers import Tokenizer
 # Import PyTorch
 from dataset import CustomDataset
 from torch.utils.data import DataLoader
+from dataset import collate_fn
 
 def get_dataloader(batch_size, num_workers=4):
     

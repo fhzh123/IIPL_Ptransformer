@@ -6,8 +6,8 @@ from model.embed import Embedding
 from model.attention import MultiHeadAttention
 from model.encoder import Encoder, EncoderLayer
 from model.decoder import Decoder, DecoderLayer
-from model.encoder_decoder import Encoder_Decoder_mk1
-from torch.nn import TransformerDecoderLayer, TransformerEncoderLayer
+from model.encoder_decoder import Encoder_Decoder_mk2
+from torch.nn import TransformerDecoderLayer, TransformerEncoderLayer, TransformerEncoder, TransformerDecoder
 from model.position import PositionWiseFeedForward, PositionalEncoding
 
 class IIPL_Transformer(nn.Module):
@@ -26,13 +26,15 @@ class IIPL_Transformer(nn.Module):
     self.positional_encoding = PositionalEncoding(emb_size, dropout=dropout)
     self.generator = nn.Linear(emb_size, tgt_vocab_size)
     # self.attn = MultiHeadAttention(emb_size, nhead, dropout)
-    # self.attn = nn.MultiheadAttention(emb_size, nhead, dropout)
+    self.attn = nn.MultiheadAttention(emb_size, nhead, dropout)
     # self.ff = PositionWiseFeedForward(emb_size, dim_feedforward)
-    self.encoder = Encoder(
+    # self.encoder = Encoder(
+    self.encoder = TransformerEncoder(
       TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_encoder_layers
       # EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout), num_encoder_layers
       )
-    self.decoder = Decoder(
+    self.decoder = TransformerDecoder(
+    # self.decoder = Decoder(
       TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_decoder_layers
       # DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout), num_decoder_layers
       )
@@ -73,7 +75,7 @@ class IIPL_P_Transformer(nn.Module):
     self.generator = nn.Linear(emb_size, tgt_vocab_size)
     self.attn = nn.MultiheadAttention(emb_size, nhead, dropout)
     self.ff = PositionWiseFeedForward(emb_size, dim_feedforward)
-    self.encoder_decoder = Encoder_Decoder_mk1(
+    self.encoder_decoder = Encoder_Decoder_mk2(
       # TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),
       # TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),
       EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout),

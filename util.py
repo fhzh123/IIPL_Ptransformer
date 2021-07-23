@@ -3,8 +3,8 @@ import os
 import copy
 import torch
 import random
+import numpy as np
 import torch.nn as nn
-import torch.nn.functional as F
 from tokenizers import Tokenizer
 
 UNK_IDX = 0
@@ -93,3 +93,17 @@ def epoch_time(time, curr_epoch, total_epochs):
     time_left_sec = int(time_left % 60)
 
     return minutes, seconds, time_left_min, time_left_sec   
+
+def get_n_stacks(n_layers, layer, partition=3):
+
+  partitions = np.full(partition, n_layers//partition)
+  partitions[: n_layers % partition] += 1
+
+  partitions = list(partitions)
+
+  stacks = []
+
+  for part in partitions:
+    stacks.append(clones(layer, part))
+    
+  return stacks

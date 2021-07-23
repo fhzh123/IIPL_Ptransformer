@@ -3,7 +3,6 @@ import os
 from tokenizers import Tokenizer
 import nltk.translate.bleu_score as bs
 from util import BOS_IDX, EOS_IDX, generate_square_subsequent_mask
-from tqdm import tqdm
 # Import PyTorch
 import torch
 from torch.nn import functional as F
@@ -50,7 +49,7 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
                     .type(torch.bool)).to(device)
         out = model.decode(ys, memory, tgt_mask)
         out = out.transpose(0, 1)
-        prob = F.log_softmax(model.generator(out[:, -1]), dim=-1)
+        prob = model.generator(out[:, -1])
         _, next_word = torch.max(prob, dim=1)
         next_word = next_word.item()
 
@@ -59,7 +58,6 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
         if next_word == EOS_IDX:
             break
     return ys
-
 
 # actual function to translate input sentence into target language
 def translate(model, src_sentence, device):
