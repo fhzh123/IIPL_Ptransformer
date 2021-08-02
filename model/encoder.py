@@ -45,11 +45,14 @@ class Encoder(nn.Module):
         self.layers = clones(layer, n_layers)
 
     def forward(self, src, src_mask, src_key_padding_mask=None):
+
+        x = src
+
         for layer in self.layers:
-            src = layer(
-                src=src, 
+            x = layer(
+                src=x, 
                 src_mask=src_mask, 
                 src_key_padding_mask=src_key_padding_mask
                 )
 
-        return src
+        return x
