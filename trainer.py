@@ -2,18 +2,17 @@ import time
 import torch
 import random
 import numpy as np
-from torch._C import dtype
-from tqdm import tqdm
 import torch.nn as nn
-from torch import optim
-import os
-
+from tqdm import tqdm
 from bleu import get_bleu
+from dataset import CustomDataset
+from sentences import get_sentences
 from my_optim import ScheduledOptim
-from preprocessing import preprocess
-from dataloader import get_dataloader
+from torch.utils.data import DataLoader
 from model.transformer import build_model
-from util import epoch_time, PAD_IDX, create_mask, get_vocab_size
+from torch.nn.utils.rnn import pad_sequence
+from util import PAD_IDX, create_mask, epoch_time
+from transforms import get_vocabs, get_text_transform
 
 SEED = 981126
 
@@ -26,38 +25,41 @@ torch.backends.cudnn.deterministic = True
 class Trainer:
     def __init__(self, num_epoch, lr,
                  emb_size, nhead, ffn_hid_dim, batch_size,
-                 n_layers, dropout, load, variation):
+                 n_layers, dropout, load, isP, variation):
         super(Trainer, self).__init__()
-        
-        self.params = {
-                       'num_epoch': num_epoch,
-                       'emb_size': emb_size,
-                       'nhead': nhead,
-                       'ffn_hid_dim': ffn_hid_dim,
-                       'batch_size': batch_size,
-                       'n_layers': n_layers,
-                       'dropout': dropout,
-                       'lr': lr,
-                       }
 
-        if not load:
-            preprocess()
+        # self.src_language = src_language
+        # self.tgt_language = tgt_language
 
-        self.params['src_vocab_size'], self.params['tgt_vocab_size'] = get_vocab_size()
+        self. params = {
+            'num_epoch': num_epoch,
+            'emb_size': emb_size,
+            'nhead': nhead,
+            'ffn_hid_dim': ffn_hid_dim,
+            'batch_size': batch_size,
+            'n_layers': n_layers,
+            'dropout': dropout,
+            'lr': lr,
+        }
 
-        self.dataloader = get_dataloader(self.params['batch_size'])
+        train, val, test = get_sentences()
+        self.train_iter = CustomDataset(train['src_lang'], train['tgt_lang'])
+        self.val_iter = CustomDataset(val['src_lang'], val['tgt_lang'])
+        self.test_iter = CustomDataset(test['src_lang'], test['tgt_lang'])
+
+        self.vocabs = get_vocabs(self.train_iter)
+        self.text_transforms = get_text_transform(self.vocabs)
+
+        self.params['src_vocab_size'], self.params['tgt_vocab_size'] = self.vocabs['self.src_language', 'self.tgt_language']
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.model = build_model(
-                            self.params['n_layers'], self.params['emb_size'], self.params['nhead'], 
-                            self.params['src_vocab_size'], self.params['tgt_vocab_size'], 
+                            self.params['n_layers'], self.params['emb_size'], self.params['nhead'],
+                            self.params['src_vocab_size'], self.params['tgt_vocab_size'],
                             self.params['ffn_hid_dim'], self.params['dropout'], variation,
                             self.device
                             )
-
-        self.variation = variation
-        self.optimizer = optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=5e-5)
 
         self.scheduler = ScheduledOptim(
             self.optimizer,
@@ -78,15 +80,29 @@ class Trainer:
         
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 
+    def collate_fn(self, batch):
+        src_batch, tgt_batch = [], []
+        for src_sample, tgt_sample in batch:
+            src_batch.append(self.text_transform['de'](
+                src_sample.rstrip("\n")))
+            tgt_batch.append(self.text_transform['en'](
+                tgt_sample.rstrip("\n")))
+
+        src_batch = pad_sequence(src_batch, padding_value=PAD_IDX)
+        tgt_batch = pad_sequence(tgt_batch, padding_value=PAD_IDX)
+        return src_batch, tgt_batch
+
     def learn(self):
         print("\nbegin training...")
 
         for epoch in range(self.start_epoch, self.params['num_epoch']+1+self.start_epoch):
             start_time = time.time()
 
-            epoch_loss = train_loop(self.dataloader['train'], self.model, self.scheduler, self.criterion, self.device)
+            train_iter = DataLoader(self.train_iter, self.params['batch_size'], True, collate_fn=self.collate_fn)
+            epoch_loss = train_loop(train_iter, self.model, self.scheduler, self.criterion, self.device)
 
-            val_loss = val_loop(self.dataloader['valid'], self.model, self.criterion, self.device)
+            val_iter = DataLoader(self.val_iter, self.params['batch_size'], False, collate_fn=self.collate_fn)
+            val_loss = val_loop(self.model, self.criterion, self.device)
 
             end_time = time.time()
 
@@ -103,7 +119,8 @@ class Trainer:
                         }, f'./data/checkpoints/{self.variation}_checkpoint.pth.tar')
             torch.save(self.model, f'./data/checkpoints/{self.variation}_checkpoint.pt')
 
-        # get_bleu(self.device,self.variation)
+        test_iter = DataLoader(self.test_iter, self.params['batch_size'], False, collate_fn=self.collate_fn)
+        get_bleu(self.model, test_iter)
 
 def train_loop(train_iter, model, scheduler, criterion, device):
     model.train()
@@ -119,17 +136,9 @@ def train_loop(train_iter, model, scheduler, criterion, device):
         
         tgt_input = tgt[:-1, :]
 
-        src_mask, tgt_mask, src_key_padding_mask, tgt_key_padding_mask = create_mask(src, tgt_input, device)
+        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input)
 
-        logits = model(
-                  src=src, 
-                  tgt=tgt_input, 
-                  src_mask=src_mask, 
-                  tgt_mask=tgt_mask,
-                  src_key_padding_mask=src_key_padding_mask, 
-                  tgt_key_padding_mask=tgt_key_padding_mask, 
-                  memory_key_padding_mask=src_key_padding_mask
-                  )
+        logits = model(src, tgt_input, src_mask, tgt_mask, src_padding_mask, tgt_padding_mask, src_padding_mask)
 
         scheduler.zero_grad()
 
@@ -156,54 +165,12 @@ def val_loop(val_iter, model, criterion, device):
         
         tgt_input = tgt[:-1, :]
 
-        src_mask, tgt_mask, src_key_padding_mask, tgt_key_padding_mask = create_mask(src, tgt_input, device)
+        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input)
 
-        logits = model(
-                  src=src, 
-                  tgt=tgt_input, 
-                  src_mask=src_mask, 
-                  tgt_mask=tgt_mask,
-                  src_key_padding_mask=src_key_padding_mask, 
-                  tgt_key_padding_mask=tgt_key_padding_mask, 
-                  memory_key_padding_mask=src_key_padding_mask
-                  )
+        logits = model(src, tgt_input, src_mask, tgt_mask, src_padding_mask, tgt_padding_mask, src_padding_mask)
 
         tgt_out = tgt[1:, :]
         loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
         losses += loss.item()
 
     return losses / len(val_iter)
-
-def test_loop(test_iter, model, criterion, device):
-    model.eval()
-    test_loss = 0
-
-    for src, tgt in tqdm(test_iter, desc = 'test'):
-        src = src.to(device)
-        tgt = tgt.to(device)
-        
-        src = src.transpose(0,1) # [length, batch]
-        tgt = tgt.transpose(0,1) # [length, batch]
-        
-        tgt_input = tgt[:-1, :]
-        
-
-        src_mask, tgt_mask, src_key_padding_mask, tgt_key_padding_mask = create_mask(src, tgt_input, device)
-
-        logits = model(
-                  src=src, 
-                  tgt=tgt_input, 
-                  src_mask=src_mask, 
-                  tgt_mask=tgt_mask,
-                  src_key_padding_mask=src_key_padding_mask, 
-                  tgt_key_padding_mask=tgt_key_padding_mask, 
-                  memory_key_padding_mask=src_key_padding_mask
-                  )
-
-        tgt_out = tgt[1:, :]
-        
-        loss = criterion(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))  
-        test_loss += loss.item()
-    test_loss /= len(test_iter)
-
-    print("Test Loss: {}".format(round(test_loss, 3)))

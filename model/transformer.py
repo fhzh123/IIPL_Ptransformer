@@ -1,4 +1,5 @@
 import copy
+from numpy.core.fromnumeric import var
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,83 +7,115 @@ from model.embed import Embedding
 from model.attention import MultiHeadAttention
 from model.encoder import Encoder, EncoderLayer
 from model.decoder import Decoder, DecoderLayer
-from model.encoder_decoder import Encoder_Decoder_mk2
-from torch.nn import TransformerDecoderLayer, TransformerEncoderLayer, TransformerEncoder, TransformerDecoder
+from model.encoder_decoder import Encoder_Decoder, Encoder_Decoder_linear, Encoder_Decoder_reverse, Encoder_Decoder_reverse_linear
 from model.position import PositionWiseFeedForward, PositionalEncoding
 
+
 class IIPL_Transformer(nn.Module):
-  def __init__(self,
-               num_encoder_layers,
-               num_decoder_layers,
-               emb_size,
-               nhead,
-               src_vocab_size,
-               tgt_vocab_size,
-               dim_feedforward = 2048,
-               dropout: float = 0.1):
-    super(IIPL_Transformer, self).__init__()
-    self.src_tok_emb = Embedding(src_vocab_size, emb_size)
-    self.tgt_tok_emb = Embedding(tgt_vocab_size, emb_size)
-    self.positional_encoding = PositionalEncoding(emb_size, dropout=dropout)
-    self.generator = nn.Linear(emb_size, tgt_vocab_size)
-    # self.attn = MultiHeadAttention(emb_size, nhead, dropout)
-    self.attn = nn.MultiheadAttention(emb_size, nhead, dropout)
-    # self.ff = PositionWiseFeedForward(emb_size, dim_feedforward)
-    # self.encoder = Encoder(
-    self.encoder = TransformerEncoder(
-      TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_encoder_layers
-      # EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout), num_encoder_layers
-      )
-    self.decoder = TransformerDecoder(
-    # self.decoder = Decoder(
-      TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_decoder_layers
-      # DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout), num_decoder_layers
+    def __init__(self,
+                 num_encoder_layers,
+                 num_decoder_layers,
+                 emb_size,
+                 nhead,
+                 src_vocab_size,
+                 tgt_vocab_size,
+                 dim_feedforward,
+                 dropout,
+                 device=None):
+      super(IIPL_Transformer, self).__init__()
+      self.generator = nn.Linear(emb_size, tgt_vocab_size)
+      self.src_tok_emb = Embedding(src_vocab_size, emb_size)
+      self.tgt_tok_emb = Embedding(tgt_vocab_size, emb_size)
+      # self.attn = nn.MultiheadAttention(emb_size, nhead, dropout)
+      self.attn = MultiHeadAttention(emb_size, nhead, dropout)
+      self.positional_encoding = PositionalEncoding(emb_size, dropout=dropout)
+      self.ff = PositionWiseFeedForward(emb_size, dim_feedforward)
+      # self.encoder = TransformerEncoder(
+      self.encoder = Encoder(
+          # TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_encoder_layers
+          EncoderLayer(emb_size, copy.deepcopy(self.attn),copy.deepcopy(self.ff), dropout), num_encoder_layers
+        )
+      # self.decoder = TransformerDecoder(
+      self.decoder = Decoder(
+          # TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_decoder_layers
+          DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout), num_decoder_layers
       )
 
-  def forward(self,
-              src,
-              tgt,
-              src_mask,
-              tgt_mask,
-              src_key_padding_mask,
-              tgt_key_padding_mask,
-              memory_key_padding_mask):
-    outs = self.decode(tgt, self.encode(src, src_mask, src_key_padding_mask), tgt_mask, None, tgt_key_padding_mask, memory_key_padding_mask)
-    return F.log_softmax(self.generator(outs), dim=-1)
-        
-  def encode(self, src, src_mask, src_key_padding_mask=None):
-    src_emb = self.positional_encoding(self.src_tok_emb(src))
-    return self.encoder(src_emb, src_mask, src_key_padding_mask)
+    def forward(self,
+                src,
+                tgt,
+                src_mask,
+                tgt_mask,
+                src_key_padding_mask,
+                tgt_key_padding_mask,
+                memory_key_padding_mask):
+      outs = self.decode(tgt, self.encode(src, src_mask, src_key_padding_mask),
+                          tgt_mask, None, tgt_key_padding_mask, memory_key_padding_mask)
+      return F.log_softmax(self.generator(outs), dim=-1)
 
-  def decode(self, tgt, src, tgt_mask, memory_mask=None, tgt_key_padding_mask=None, memory_key_padding_mask=None):
-    tgt_emb = self.positional_encoding(self.tgt_tok_emb(tgt))
-    return self.decoder(tgt_emb, src, tgt_mask, memory_mask, tgt_key_padding_mask, memory_key_padding_mask)
+    def encode(self, src, src_mask, src_key_padding_mask=None):
+      src_emb = self.positional_encoding(self.src_tok_emb(src))
+      return self.encoder(src_emb, src_mask, src_key_padding_mask)
+
+    def decode(self, tgt, src, tgt_mask, memory_mask=None, tgt_key_padding_mask=None, memory_key_padding_mask=None):
+      tgt_emb = self.positional_encoding(self.tgt_tok_emb(tgt))
+      return self.decoder(tgt_emb, src, tgt_mask, memory_mask, tgt_key_padding_mask, memory_key_padding_mask)
 
 class IIPL_P_Transformer(nn.Module):
-  def __init__(self,
-               num_encoder_layers,
-               num_decoder_layers,
-               emb_size,
-               nhead,
-               src_vocab_size,
-               tgt_vocab_size,
-               dim_feedforward = 512,
-               dropout: float = 0.1):
-    super(IIPL_P_Transformer, self).__init__()
-    self.src_tok_emb = Embedding(src_vocab_size, emb_size)
-    self.tgt_tok_emb = Embedding(tgt_vocab_size, emb_size)
-    self.positional_encoding = PositionalEncoding(emb_size, dropout=dropout)
-    self.generator = nn.Linear(emb_size, tgt_vocab_size)
-    self.attn = nn.MultiheadAttention(emb_size, nhead, dropout)
-    self.ff = PositionWiseFeedForward(emb_size, dim_feedforward)
-    self.encoder_decoder = Encoder_Decoder_mk2(
-      # TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),
-      # TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),
-      EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout),
-      DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout),
-      num_decoder_layers
-      )
-    
+  def __init__(
+              self,
+              num_encoder_layers,
+              num_decoder_layers,
+                emb_size,
+                nhead,
+                src_vocab_size,
+                tgt_vocab_size,
+                dim_feedforward,
+                dropout,
+                variation="Encoder_Decoder",
+                device=None):
+      super(IIPL_P_Transformer, self).__init__()
+      self.generator = nn.Linear(emb_size, tgt_vocab_size)
+      self.src_tok_emb = Embedding(src_vocab_size, emb_size)
+      self.tgt_tok_emb = Embedding(tgt_vocab_size, emb_size)
+      # self.attn = nn.MultiheadAttention(emb_size, nhead, dropout)
+      self.attn = MultiHeadAttention(emb_size, nhead, dropout, device)
+      self.positional_encoding = PositionalEncoding(emb_size, dropout=dropout)
+      self.ff = PositionWiseFeedForward(emb_size, dim_feedforward, device=device)
+        
+      if variation == "Encoder_Decoder":
+        self.encoder_decoder = Encoder_Decoder(
+        # TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_encoder_layers
+        EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
+        # TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_decoder_layers
+        DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
+        num_encoder_layers, num_decoder_layers, device
+        )
+      elif variation == "Encoder_Decoder_linear":
+        self.encoder_decoder = Encoder_Decoder_linear(
+            # TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_encoder_layers
+            EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
+            # TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_decoder_layers
+            DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
+            num_encoder_layers, num_decoder_layers, device
+        )
+      elif variation == "Encoder_Decoder_reverse":
+        self.encoder_decoder = Encoder_Decoder_reverse(
+            # TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_encoder_layers
+            EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
+            # TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_decoder_layers
+            DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
+            num_encoder_layers, num_decoder_layers, device
+        )
+      else:
+        self.encoder_decoder = Encoder_Decoder_reverse_linear(
+            # TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_encoder_layers
+            EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
+            # TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_decoder_layers
+            DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
+            num_encoder_layers, num_decoder_layers, device
+        )
+
   def forward(self,
               src,
               tgt,
@@ -91,40 +124,18 @@ class IIPL_P_Transformer(nn.Module):
               src_key_padding_mask,
               tgt_key_padding_mask,
               memory_key_padding_mask):
+      outs = self.encoder_decoder(self.positional_encoding(self.src_tok_emb(src)), src_mask, src_key_padding_mask, self.positional_encoding(self.tgt_tok_emb(tgt)), memory_key_padding_mask, tgt_mask, tgt_key_padding_mask)
+      return F.log_softmax(self.generator(outs), dim=-1)
 
-    outs = self.encode_decode(
-        src=src,
-        tgt=tgt,
-        src_mask=src_mask,
-        tgt_mask=tgt_mask,
-        src_key_padding_mask=src_key_padding_mask,
-        tgt_key_padding_mask=tgt_key_padding_mask,
-        memory_key_padding_mask=memory_key_padding_mask
-        )
+  def encode(self, src, src_mask, src_key_padding_mask=None, device=None):
+      src_emb = self.positional_encoding(self.src_tok_emb(src))
+      return self.encoder_decoder.encode(src_emb, src_mask)
 
-    return F.log_softmax(self.generator(outs), dim=-1)
+  def decode(self, tgt, src, tgt_mask, memory_mask=None, tgt_key_padding_mask=None, memory_key_padding_mask=None):
+      tgt_emb = self.positional_encoding(self.tgt_tok_emb(tgt))
+      return self.encoder_decoder.decode(tgt_emb, src, tgt_mask)
 
-  def encode_decode(self, src, tgt, src_mask, tgt_mask, src_key_padding_mask, tgt_key_padding_mask, memory_key_padding_mask):
-    src_emb = self.positional_encoding(self.src_tok_emb(src))
-    tgt_emb = self.positional_encoding(self.tgt_tok_emb(tgt))
-    return self.encoder_decoder(
-                        src=src_emb,
-                        tgt=tgt_emb,
-                        src_mask=src_mask,
-                        tgt_mask=tgt_mask,
-                        src_key_padding_mask=src_key_padding_mask,
-                        tgt_key_padding_mask=tgt_key_padding_mask,
-                        memory_key_padding_mask=memory_key_padding_mask
-                        )
-
-  def encode(self, src, src_mask):
-    src_emb = self.positional_encoding(self.src_tok_emb(src))
-    return self.encoder_decoder.encode(src_emb, src_mask)
-
-  def decode(self, tgt, src, tgt_mask):
-    tgt_emb = self.positional_encoding(self.tgt_tok_emb(tgt))
-    return self.encoder_decoder.decode(tgt_emb, src, tgt_mask)
-
+  
 def build_model(num_layers,
                 emb_size,
                 nhead,
@@ -132,9 +143,10 @@ def build_model(num_layers,
                 tgt_vocab_size,
                 dim_feedforward=2048,
                 dropout=0.1,
+                isP=False,
                 variation=False,
                 device=None):
-  if variation:
+  if isP:
     print("\nBuilding P-Transformer..")
     model = IIPL_P_Transformer(
         num_encoder_layers=num_layers,
@@ -144,7 +156,8 @@ def build_model(num_layers,
         src_vocab_size=src_vocab_size,
         tgt_vocab_size=tgt_vocab_size,
         dim_feedforward=dim_feedforward,
-        dropout=dropout
+        dropout=dropout,
+        variation=variation
     )
   else:
     print("\nBuilding Original Transformer")
@@ -158,6 +171,8 @@ def build_model(num_layers,
         dim_feedforward=dim_feedforward,
         dropout=dropout
     )
+
+
     
   
   for p in model.parameters():
