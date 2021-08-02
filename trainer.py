@@ -62,7 +62,7 @@ class Trainer:
                             )
 
         self.scheduler = ScheduledOptim(
-            self.optimizer,
+            torch.optim.Adam(self.model.parameters(),lr=0.0001, betas=(0.9, 0.98), eps=1e-9),
             warmup_steps=4000,
             hidden_dim=self.params['ffn_hid_dim']
         )
@@ -83,10 +83,8 @@ class Trainer:
     def collate_fn(self, batch):
         src_batch, tgt_batch = [], []
         for src_sample, tgt_sample in batch:
-            src_batch.append(self.text_transform['de'](
-                src_sample.rstrip("\n")))
-            tgt_batch.append(self.text_transform['en'](
-                tgt_sample.rstrip("\n")))
+            src_batch.append(self.text_transforms['src_lang'](src_sample.rstrip("\n")))
+            tgt_batch.append(self.text_transforms['tgt_lang'](tgt_sample.rstrip("\n")))
 
         src_batch = pad_sequence(src_batch, padding_value=PAD_IDX)
         tgt_batch = pad_sequence(tgt_batch, padding_value=PAD_IDX)
@@ -127,16 +125,15 @@ def train_loop(train_iter, model, scheduler, criterion, device):
     epoch_loss = 0
 
     for src, tgt in tqdm(train_iter, desc = 'training...'):
-
+        # [length, batch]
         src = src.to(device)
-        tgt = tgt.to(device)
         
-        src = src.transpose(0,1) # [length, batch]
-        tgt = tgt.transpose(0,1) # [length, batch]
+        # [length, batch]
+        tgt = tgt.to(device)
         
         tgt_input = tgt[:-1, :]
 
-        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input)
+        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input, device)
 
         logits = model(src, tgt_input, src_mask, tgt_mask, src_padding_mask, tgt_padding_mask, src_padding_mask)
 
@@ -157,15 +154,16 @@ def val_loop(val_iter, model, criterion, device):
     losses = 0
 
     for src, tgt in tqdm(val_iter, desc = 'validation...'):
+        # [length, batch]
         src = src.to(device)
+        
+        # [length, batch]
         tgt = tgt.to(device)
         
-        src = src.transpose(0,1) # [length, batch]
-        tgt = tgt.transpose(0,1) # [length, batch]
         
         tgt_input = tgt[:-1, :]
 
-        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input)
+        src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input, device)
 
         logits = model(src, tgt_input, src_mask, tgt_mask, src_padding_mask, tgt_padding_mask, src_padding_mask)
 
