@@ -20,8 +20,6 @@ def get_sentences(max_len=300):
         data.loc[:, 'en_len'] = data.loc[:, 'en'].apply(len)
         data, dump = data.loc[(data.de_len <= max_len) & (data.en_len <= max_len), [
             'de', 'en']], data.loc[(data.de_len > max_len) & (data.en_len > max_len), ['de', 'en']]
-        print(len(data))
-        print(len(dump))
         del dump
 
         src_list = list(data.loc[:, 'de'])

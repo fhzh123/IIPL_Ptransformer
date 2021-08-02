@@ -1,14 +1,14 @@
 import copy
-from numpy.core.fromnumeric import var
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from model.embed import Embedding
 from model.attention import MultiHeadAttention
 from model.encoder import Encoder, EncoderLayer
 from model.decoder import Decoder, DecoderLayer
+from model.position import PositionWiseFeedForward
+from model.embed import Embedding, PositionalEncoding
 from model.encoder_decoder import Encoder_Decoder, Encoder_Decoder_linear, Encoder_Decoder_reverse, Encoder_Decoder_reverse_linear
-from model.position import PositionWiseFeedForward, PositionalEncoding
+
 
 
 class IIPL_Transformer(nn.Module):

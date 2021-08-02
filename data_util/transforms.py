@@ -3,8 +3,8 @@ from util import BOS_IDX, EOS_IDX, UNK_IDX
 from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 
-SRC_LANGUAGE = 'de'
-TGT_LANGUAGE = 'en'
+SRC_LANGUAGE = 'src_lang'
+TGT_LANGUAGE = 'tgt_lang'
 
 token_transform = {}
 

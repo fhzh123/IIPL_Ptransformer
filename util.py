@@ -53,27 +53,6 @@ def clones(module, N):
     # returns N deepcopies of the input module
     return nn.ModuleList( [ copy.deepcopy(module) for _ in range(N) ] )
 
-
-def divide_sentences(sentences):
-    train, val, test = {}, {}, {}
-
-    for ln in ['src_lang', 'tgt_lang']:
-        temp = sentences[ln]
-        random.shuffle(temp)
-        train_len = int(len(temp)*0.8)
-        val_len = int(len(temp)*0.1)+train_len
-        test_len = int(len(temp)*0.1)+val_len+train_len
-        tmp_train, tmp_val, tmp_test = temp[0:train_len], temp[train_len:val_len], temp[val_len:test_len]
-
-        train[ln], val[ln], test[ln] = tmp_train, tmp_val, tmp_test
-
-    print("\ntrain data length: {}".format(len(train['src_lang'])))
-    print("validation data length: {}".format(len(val['src_lang'])))
-    print("test data length: {}\n".format(len(test['src_lang'])))
-
-    return train, val, test
-
-
 def epoch_time(time, curr_epoch, total_epochs):
     minutes = int(time / 60)
     seconds = int(time % 60)

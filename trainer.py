@@ -5,14 +5,14 @@ import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
 from bleu import get_bleu
-from dataset import CustomDataset
-from sentences import get_sentences
 from my_optim import ScheduledOptim
 from torch.utils.data import DataLoader
 from model.transformer import build_model
+from data_util.dataset import CustomDataset
 from torch.nn.utils.rnn import pad_sequence
+from data_util.sentences import get_sentences
 from util import PAD_IDX, create_mask, epoch_time
-from transforms import get_vocabs, get_text_transform
+from data_util.transforms import get_vocabs, get_text_transform
 
 SEED = 981126
 
@@ -50,14 +50,14 @@ class Trainer:
         self.vocabs = get_vocabs(self.train_iter)
         self.text_transforms = get_text_transform(self.vocabs)
 
-        self.params['src_vocab_size'], self.params['tgt_vocab_size'] = self.vocabs['self.src_language', 'self.tgt_language']
+        self.params['src_vocab_size'], self.params['tgt_vocab_size'] = len(self.vocabs['src_lang']), len(self.vocabs['tgt_lang'])
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.model = build_model(
                             self.params['n_layers'], self.params['emb_size'], self.params['nhead'],
                             self.params['src_vocab_size'], self.params['tgt_vocab_size'],
-                            self.params['ffn_hid_dim'], self.params['dropout'], variation,
+                            self.params['ffn_hid_dim'], self.params['dropout'], isP, variation,
                             self.device
                             )
 
