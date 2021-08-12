@@ -68,7 +68,6 @@ def scaled_dot_product_attention(query, key, value, mask=None, dropout=None):
         scores += mask
 
     scores = dropout(F.softmax(scores, dim=-1))
-
     attn = torch.bmm(scores, value)
 
     # attn = [ batch * nhead, tgt_len, d_k ]

@@ -22,6 +22,7 @@ class EncoderLayer(nn.Module):
                         attn_mask = src_mask, 
                         key_padding_mask = src_key_padding_mask
                         )
+                        
         
         # x = [src_seq_len, batch, embed_size]
         

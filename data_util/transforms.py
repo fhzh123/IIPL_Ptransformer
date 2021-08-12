@@ -1,4 +1,6 @@
 import torch
+import os
+import pickle
 from util import BOS_IDX, EOS_IDX, UNK_IDX
 from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
@@ -11,6 +13,8 @@ token_transform = {}
 token_transform[SRC_LANGUAGE] = get_tokenizer('spacy', language='de_core_news_sm')
 token_transform[TGT_LANGUAGE] = get_tokenizer('spacy', language='en_core_web_sm')
 
+vocab_path = "./data/wmt14/vocab_transform.pkl"
+
 def yield_tokens(data_iter, language):
     language_index = {SRC_LANGUAGE: 0, TGT_LANGUAGE: 1}
 
@@ -18,18 +22,28 @@ def yield_tokens(data_iter, language):
         yield token_transform[language](data_sample[language_index[language]])
 
 def get_vocabs(train_iter):
-    vocab_transform = {}
-
     special_symbols = ['<unk>', '<pad>', '<bos>', '<eos>']
+    
+    if(os.path.isfile(vocab_path)):
+        print("    load vocab_transform")
+        with open(vocab_path , 'rb') as f:
+            vocab_transform = pickle.load(f)
+    else :
+        vocab_transform = {}
 
-    for ln in [SRC_LANGUAGE, TGT_LANGUAGE]:
-        vocab_transform[ln] = build_vocab_from_iterator(yield_tokens(train_iter, ln),
-                                                        min_freq=5,
-                                                        specials=special_symbols,
-                                                        special_first=True)
+        for ln in [SRC_LANGUAGE, TGT_LANGUAGE]:
+            vocab_transform[ln] = build_vocab_from_iterator(yield_tokens(train_iter, ln),
+                                                            min_freq=5,
+                                                            specials=special_symbols,
+                                                            special_first=True)
 
-    for ln in [SRC_LANGUAGE, TGT_LANGUAGE]:
-        vocab_transform[ln].set_default_index(UNK_IDX)
+        for ln in [SRC_LANGUAGE, TGT_LANGUAGE]:
+            vocab_transform[ln].set_default_index(UNK_IDX)
+        
+        with open(vocab_path , 'wb') as f:
+            pickle.dump(vocab_transform, f, protocol=pickle.HIGHEST_PROTOCOL)
+        print("    save vocab_transform")
+
 
     return vocab_transform
 

@@ -5,10 +5,14 @@ import pickle
 import pandas as pd
 from datasets import load_dataset
 
+
+data_path = "./data/wmt14/wmt14.pkl"
+
 def get_sentences(max_len=300):
-    if(os.path.isfile("./data/wmt14.pkl")):
-        print("\nload wmt14.pkl")
-        with open('./data/wmt14.pkl', 'rb') as f:
+    if(os.path.isfile(data_path)):
+        print("\nload {}".format(data_path))
+        with open(data_path, 'rb') as f:
+
             dicts = pickle.load(f)
     else:
         print("no pickle")
@@ -26,10 +30,11 @@ def get_sentences(max_len=300):
         tgt_list = list(data.loc[:, 'en'])
         del data
         dicts = {'src_lang': src_list, 'tgt_lang': tgt_list}
-        with open('./data/wmt14.pkl', 'wb') as f:
+        with open(data_path, 'wb') as f:
             pickle.dump(dicts, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-        print("\nsave wmt14.pkl")
+        print("\nsave {}".format(data_path))
+
 
     return divide_sentences(dicts)
 
@@ -40,9 +45,12 @@ def divide_sentences(sentences):
     for ln in ['src_lang', 'tgt_lang']:
         temp = sentences[ln]
         random.shuffle(temp)
+        
         train_len = int(len(temp)*0.8)
         val_len = int(len(temp)*0.1)+train_len
-        test_len = int(len(temp)*0.1)+val_len+train_len
+        test_len = int(len(temp))
+
+
         tmp_train, tmp_val, tmp_test = temp[0:train_len], temp[train_len:val_len], temp[val_len:test_len]
 
         train[ln], val[ln], test[ln] = tmp_train, tmp_val, tmp_test
