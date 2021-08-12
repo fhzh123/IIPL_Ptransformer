@@ -44,6 +44,7 @@ def get_vocabs(train_iter):
             pickle.dump(vocab_transform, f, protocol=pickle.HIGHEST_PROTOCOL)
         print("    save vocab_transform")
 
+
     return vocab_transform
 
 
@@ -66,8 +67,8 @@ def get_text_transform(vocab_transform):
     text_transform = {}
     for ln in [SRC_LANGUAGE, TGT_LANGUAGE]:
         text_transform[ln] = sequential_transforms(token_transform[ln],  # Tokenization
-                                                # Numericalization
-                                                vocab_transform[ln],
-                                                tensor_transform)  # Add BOS/EOS and create tensor
+                                                   # Numericalization
+                                                   vocab_transform[ln],
+                                                   tensor_transform)  # Add BOS/EOS and create tensor
 
     return text_transform

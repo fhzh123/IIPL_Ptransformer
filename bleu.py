@@ -31,6 +31,7 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
     return ys
 
 
+
 def translate(model, src_sentence, vocabs, text_transform, device):
     model.eval()
 
@@ -43,13 +44,16 @@ def translate(model, src_sentence, vocabs, text_transform, device):
 
 
 def get_bleu(model, test_iter, vocabs, text_transform, device):
+
     bleu_scores = 0
     chencherry = bs.SmoothingFunction()
 
     count = 0
 
     for de, en in test_iter:
+
         candidate = translate(model, de, vocabs, text_transform, device).split()
+
         reference = [en.split()]
         if reference[0][-1][-1] == ".":
             reference[0][-1].replace(".", "")

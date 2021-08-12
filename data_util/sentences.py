@@ -12,6 +12,7 @@ def get_sentences(max_len=300):
     if(os.path.isfile(data_path)):
         print("\nload {}".format(data_path))
         with open(data_path, 'rb') as f:
+
             dicts = pickle.load(f)
     else:
         print("no pickle")
@@ -34,6 +35,7 @@ def get_sentences(max_len=300):
 
         print("\nsave {}".format(data_path))
 
+
     return divide_sentences(dicts)
 
 
@@ -47,6 +49,7 @@ def divide_sentences(sentences):
         train_len = int(len(temp)*0.8)
         val_len = int(len(temp)*0.1)+train_len
         test_len = int(len(temp))
+
 
         tmp_train, tmp_val, tmp_test = temp[0:train_len], temp[train_len:val_len], temp[val_len:test_len]
 

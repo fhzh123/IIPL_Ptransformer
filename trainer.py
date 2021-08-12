@@ -51,7 +51,7 @@ class Trainer:
         print('get_vocab & text_transform start')
         self.vocabs = get_vocabs(self.train_iter)
         self.text_transforms = get_text_transform(self.vocabs)
-        
+
         self.params['src_vocab_size'], self.params['tgt_vocab_size'] = len(self.vocabs['src_lang']), len(self.vocabs['tgt_lang'])
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -120,7 +120,7 @@ class Trainer:
             torch.save(self.model, f'./data/checkpoints/{self.variation}_checkpoint.pt')
 
         get_bleu(self.model, self.test_iter, self.vocabs, self.text_transforms, self.device)
-
+  
 def train_loop(train_iter, model, scheduler, criterion, device):
     model.train()
     epoch_loss = 0
