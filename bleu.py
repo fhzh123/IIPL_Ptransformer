@@ -18,7 +18,7 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
     ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(device)
     for i in range(max_len-1):
         tgt_mask = (generate_square_subsequent_mask(ys.size(0), device = device)).type(torch.bool).to(device)
-        out = model.decode(ys, memory, tgt_mask)
+        out,_ = model.decode(ys, memory, tgt_mask)
         out = out.transpose(0, 1)
         prob = model.generator(out[:, -1])
         _, next_word = torch.max(prob, dim=1)
@@ -29,7 +29,6 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
         if next_word == EOS_IDX:
             break
     return ys
-
 
 
 def translate(model, src_sentence, vocabs, text_transform, device):
@@ -44,16 +43,13 @@ def translate(model, src_sentence, vocabs, text_transform, device):
 
 
 def get_bleu(model, test_iter, vocabs, text_transform, device):
-
     bleu_scores = 0
     chencherry = bs.SmoothingFunction()
 
     count = 0
 
     for de, en in test_iter:
-
         candidate = translate(model, de, vocabs, text_transform, device).split()
-
         reference = [en.split()]
         if reference[0][-1][-1] == ".":
             reference[0][-1].replace(".", "")

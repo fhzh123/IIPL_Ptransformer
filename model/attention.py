@@ -44,7 +44,7 @@ class MultiHeadAttention(nn.Module):
                 new_attn_mask = torch.zeros_like(attn_mask, dtype=torch.float)
                 new_attn_mask.masked_fill_(attn_mask, float("-inf"))
                 attn_mask = new_attn_mask
-
+        
         attn = scaled_dot_product_attention(
             query, key, value, attn_mask, self.dropout)
         attn = attn.transpose(0, 1).contiguous().view(

@@ -7,9 +7,7 @@ from model.encoder import Encoder, EncoderLayer
 from model.decoder import Decoder, DecoderLayer
 from model.position import PositionWiseFeedForward
 from model.embed import Embedding, PositionalEncoding
-from model.encoder_decoder import Encoder_Decoder, Encoder_Decoder_linear, Encoder_Decoder_reverse, Encoder_Decoder_reverse_linear
-
-
+from model.encoder_decoder import Encoder_Decoder
 
 class IIPL_Transformer(nn.Module):
     def __init__(self,
@@ -49,9 +47,9 @@ class IIPL_Transformer(nn.Module):
                 src_key_padding_mask,
                 tgt_key_padding_mask,
                 memory_key_padding_mask):
-      outs = self.decode(tgt, self.encode(src, src_mask, src_key_padding_mask),
+      outs, mem = self.decode(tgt, self.encode(src, src_mask, src_key_padding_mask),
                           tgt_mask, None, tgt_key_padding_mask, memory_key_padding_mask)
-      return F.log_softmax(self.generator(outs), dim=-1)
+      return F.log_softmax(self.generator(outs), dim=-1), mem
 
     def encode(self, src, src_mask, src_key_padding_mask=None):
       src_emb = self.positional_encoding(self.src_tok_emb(src))
@@ -72,49 +70,23 @@ class IIPL_P_Transformer(nn.Module):
                 tgt_vocab_size,
                 dim_feedforward,
                 dropout,
-                variation="Encoder_Decoder",
                 device=None):
       super(IIPL_P_Transformer, self).__init__()
       self.generator = nn.Linear(emb_size, tgt_vocab_size)
       self.src_tok_emb = Embedding(src_vocab_size, emb_size)
       self.tgt_tok_emb = Embedding(tgt_vocab_size, emb_size)
       # self.attn = nn.MultiheadAttention(emb_size, nhead, dropout)
-      self.attn = MultiHeadAttention(emb_size, nhead, dropout, device)
+      self.attn = MultiHeadAttention(emb_size, nhead, dropout)
       self.positional_encoding = PositionalEncoding(emb_size, dropout=dropout)
-      self.ff = PositionWiseFeedForward(emb_size, dim_feedforward, device=device)
+      self.ff = PositionWiseFeedForward(emb_size, dim_feedforward)
         
-      if variation == "Encoder_Decoder":
-        self.encoder_decoder = Encoder_Decoder(
-        # TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_encoder_layers
-        EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
-        # TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_decoder_layers
-        DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
-        num_encoder_layers, num_decoder_layers, device
-        )
-      elif variation == "Encoder_Decoder_linear":
-        self.encoder_decoder = Encoder_Decoder_linear(
-            # TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_encoder_layers
-            EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
-            # TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_decoder_layers
-            DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
-            num_encoder_layers, num_decoder_layers, device
-        )
-      elif variation == "Encoder_Decoder_reverse":
-        self.encoder_decoder = Encoder_Decoder_reverse(
-            # TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_encoder_layers
-            EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
-            # TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_decoder_layers
-            DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
-            num_encoder_layers, num_decoder_layers, device
-        )
-      else:
-        self.encoder_decoder = Encoder_Decoder_reverse_linear(
-            # TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_encoder_layers
-            EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
-            # TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_decoder_layers
-            DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout, device),
-            num_encoder_layers, num_decoder_layers, device
-        )
+      self.encoder_decoder = Encoder_Decoder(
+      # TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_encoder_layers
+      EncoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout),
+      # TransformerDecoderLayer(emb_size, nhead, dim_feedforward, dropout, activation='gelu'),num_decoder_layers
+      DecoderLayer(emb_size, copy.deepcopy(self.attn), copy.deepcopy(self.ff), dropout),
+      num_encoder_layers, num_decoder_layers
+      )
 
   def forward(self,
               src,
@@ -124,8 +96,8 @@ class IIPL_P_Transformer(nn.Module):
               src_key_padding_mask,
               tgt_key_padding_mask,
               memory_key_padding_mask):
-      outs = self.encoder_decoder(self.positional_encoding(self.src_tok_emb(src)), src_mask, src_key_padding_mask, self.positional_encoding(self.tgt_tok_emb(tgt)), memory_key_padding_mask, tgt_mask, tgt_key_padding_mask)
-      return F.log_softmax(self.generator(outs), dim=-1)
+      outs,encoder_out = self.encoder_decoder(self.positional_encoding(self.src_tok_emb(src)), src_mask, src_key_padding_mask, self.positional_encoding(self.tgt_tok_emb(tgt)), memory_key_padding_mask, tgt_mask, tgt_key_padding_mask)
+      return F.log_softmax(self.generator(outs), dim=-1),encoder_out
 
   def encode(self, src, src_mask, src_key_padding_mask=None, device=None):
       src_emb = self.positional_encoding(self.src_tok_emb(src))
@@ -144,7 +116,6 @@ def build_model(num_layers,
                 dim_feedforward=2048,
                 dropout=0.1,
                 isP=False,
-                variation=False,
                 device=None):
   if isP:
     print("\nBuilding P-Transformer..")
@@ -156,8 +127,7 @@ def build_model(num_layers,
         src_vocab_size=src_vocab_size,
         tgt_vocab_size=tgt_vocab_size,
         dim_feedforward=dim_feedforward,
-        dropout=dropout,
-        variation=variation
+        dropout=dropout
     )
   else:
     print("\nBuilding Original Transformer")
@@ -172,9 +142,6 @@ def build_model(num_layers,
         dropout=dropout
     )
 
-
-    
-  
   for p in model.parameters():
     if p.dim() > 1:
       nn.init.xavier_uniform_(p)

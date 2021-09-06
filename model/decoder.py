@@ -65,4 +65,4 @@ class Decoder(nn.Module):
                 memory_key_padding_mask=memory_key_padding_mask
             )
 
-        return self.norm(tgt)
+        return self.norm(tgt), memory

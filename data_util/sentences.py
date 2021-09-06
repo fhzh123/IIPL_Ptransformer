@@ -12,7 +12,6 @@ def get_sentences(max_len=300):
     if(os.path.isfile(data_path)):
         print("\nload {}".format(data_path))
         with open(data_path, 'rb') as f:
-
             dicts = pickle.load(f)
     else:
         print("no pickle")
@@ -22,9 +21,9 @@ def get_sentences(max_len=300):
                             ['translation']+dataset['test']['translation'])
         data.loc[:, 'de_len'] = data.loc[:, 'de'].apply(len)
         data.loc[:, 'en_len'] = data.loc[:, 'en'].apply(len)
-        data, dump = data.loc[(data.de_len <= max_len) & (data.en_len <= max_len), [
-            'de', 'en']], data.loc[(data.de_len > max_len) & (data.en_len > max_len), ['de', 'en']]
+        data, dump = data.loc[(data.de_len <= max_len) & (data.en_len <= max_len), ['de', 'en']], data.loc[(data.de_len > max_len) & (data.en_len > max_len), ['de', 'en']]
         del dump
+        
 
         src_list = list(data.loc[:, 'de'])
         tgt_list = list(data.loc[:, 'en'])
@@ -34,7 +33,6 @@ def get_sentences(max_len=300):
             pickle.dump(dicts, f, protocol=pickle.HIGHEST_PROTOCOL)
 
         print("\nsave {}".format(data_path))
-
 
     return divide_sentences(dicts)
 
@@ -46,9 +44,13 @@ def divide_sentences(sentences):
         temp = sentences[ln]
         random.shuffle(temp)
         
-        train_len = int(len(temp)*0.8)
-        val_len = int(len(temp)*0.1)+train_len
-        test_len = int(len(temp))
+        #train_len = int(len(temp)*0.8)
+        #val_len = int(len(temp)*0.1)+train_len
+        #test_len = int(len(temp))
+
+        train_len = int(400000)
+        val_len = int(50000)+train_len
+        test_len = int(460000)
 
 
         tmp_train, tmp_val, tmp_test = temp[0:train_len], temp[train_len:val_len], temp[val_len:test_len]

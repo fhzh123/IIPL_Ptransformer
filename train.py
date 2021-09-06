@@ -10,7 +10,7 @@ def main(param):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Transformer Machine Translation')
     parser.add_argument('--load', type=bool, default=False)
-    parser.add_argument('--num_epoch', type=int, default=15)
+    parser.add_argument('--num_epoch', type=int, default=30)
     parser.add_argument('--nhead', type=int, default=8)
     parser.add_argument('--emb_size', type=int, default=512)
     parser.add_argument('--ffn_hid_dim', type=int, default=2048)
@@ -18,7 +18,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_layers', type=int, default=6)
     parser.add_argument('--dropout', type=float, default=0.1)
     parser.add_argument('--isP', type=bool, default=False)
-    parser.add_argument('--variation', type=str, default="Encoder_Decoder", choices=["Encoder_Decoder", "Encoder_Decoder_linear", "Encoder_Decoder_reverse", "Encoder_Decoder_reverse_linear"])
+    parser.add_argument('--variation', type=str, default="None", choices=["None", "puzzle"])
     parser.add_argument('--learning_rate', type=float, default=5e-5)
     args = parser.parse_args()
     main(args)

@@ -1,7 +1,7 @@
 import torch
 import os
 import pickle
-from util import BOS_IDX, EOS_IDX, UNK_IDX
+from util import BOS_IDX, EOS_IDX, UNK_IDX, PAD_IDX
 from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 
@@ -13,7 +13,8 @@ token_transform = {}
 token_transform[SRC_LANGUAGE] = get_tokenizer('spacy', language='de_core_news_sm')
 token_transform[TGT_LANGUAGE] = get_tokenizer('spacy', language='en_core_web_sm')
 
-vocab_path = "./data/wmt14/vocab_transform.pkl"
+#vocab_path = "./data/wmt14/vocab_transform.pkl"
+vocab_path = "./data/wmt16/vocab_transform.pkl"
 
 def yield_tokens(data_iter, language):
     language_index = {SRC_LANGUAGE: 0, TGT_LANGUAGE: 1}
@@ -44,7 +45,6 @@ def get_vocabs(train_iter):
             pickle.dump(vocab_transform, f, protocol=pickle.HIGHEST_PROTOCOL)
         print("    save vocab_transform")
 
-
     return vocab_transform
 
 
@@ -67,8 +67,8 @@ def get_text_transform(vocab_transform):
     text_transform = {}
     for ln in [SRC_LANGUAGE, TGT_LANGUAGE]:
         text_transform[ln] = sequential_transforms(token_transform[ln],  # Tokenization
-                                                   # Numericalization
-                                                   vocab_transform[ln],
-                                                   tensor_transform)  # Add BOS/EOS and create tensor
+                                                # Numericalization
+                                                vocab_transform[ln],
+                                                tensor_transform)  # Add BOS/EOS and create tensor
 
     return text_transform
